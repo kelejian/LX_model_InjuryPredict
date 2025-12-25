@@ -16,6 +16,10 @@ try:
 except ImportError:
     from AIS_cal import AIS_3_cal_head, AIS_cal_head, AIS_cal_chest, AIS_cal_neck   # 直接运行时使用
 
+# ============================================================================
+CASE_ID_OFFSET = 50000  # 副驾侧case_id在主驾侧基础上加50000
+# ============================================================================
+
 def package_input_data(pulse_dir, params_path, case_id_list, output_path):
     """
     处理、降采样并将指定案例的输入工况参数和波形数据打包在一起。
@@ -61,9 +65,16 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
                 continue
 
             # --- 3. 读取并处理波形 ---
-            x_path = os.path.join(pulse_dir, f'x{case_id}.csv')
-            y_path = os.path.join(pulse_dir, f'y{case_id}.csv')
-            # z_path = os.path.join(pulse_dir, f'z{case_id}.csv')
+            params_row = params_df.loc[case_id]
+            if params_row['is_driver_side'] == 1:
+                x_path = os.path.join(pulse_dir, f'x{case_id}.csv')
+                y_path = os.path.join(pulse_dir, f'y{case_id}.csv')
+                # z_path = os.path.join(pulse_dir, f'z{case_id}.csv')
+            else:
+                x_path = os.path.join(pulse_dir, f'x{case_id - CASE_ID_OFFSET}.csv')
+                y_path = os.path.join(pulse_dir, f'y{case_id - CASE_ID_OFFSET}.csv')
+
+            
 
             if not all(os.path.exists(p) for p in [x_path, y_path]):  # Removed z_path check
                 print(f"警告：案例 {case_id} 的波形文件不完整，已跳过。")
@@ -97,10 +108,9 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
             
             waveforms_np = np.stack([ax_sampled, ay_sampled]).squeeze() # 形状 (2, 150), 通道维度在前，分别是 x, y，对应索引 0, 1
 
-            # --- 4. 提取匹配的参数 ---
-            params_row = params_df.loc[case_id]
+            # --- 4. 提取匹配的参数 ---          
             params_np = np.array([
-                # --- 连续特征 (Continuous) ---
+                # --- 连续特征 (Continuous): 共 10 个---
                 params_row['impact_velocity'], # 碰撞速度 kph
                 params_row['impact_angle'], # 碰撞角度 °，分正负方向
                 params_row['overlap'], # 重叠率，分正负方向
@@ -112,7 +122,7 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
                 params_row['SP'], # 座椅前后位置 mm
                 params_row['RA'], # 座椅靠背角 °；虽离散化但作为连续特征处理
                 
-                # --- 离散特征 (Discrete) ---
+                # --- 离散特征 (Discrete): 共 2 个---
                 params_row['is_driver_side'], # 主驾侧标识 (0/1)
                 params_row['OT'] # 乘员体征 (1/2/3)
             ], dtype=np.float32) # 形状 (12,)
@@ -132,14 +142,12 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 
     # --- 6. 将数据列表转换为Numpy数组并保存 ---
     final_case_ids = np.array(processed_case_ids, dtype=int) # 形状 (N,)
-    final_params = np.stack(processed_params, axis=0) # 形状 (N, 18)
-    final_waveforms = np.stack(processed_waveforms, axis=0) # 形状 (N, 3, 150)
-
+    final_params = np.stack(processed_params, axis=0) # 形状 (N, 12)
+    final_waveforms = np.stack(processed_waveforms, axis=0) # 形状 (N, 2, 150)
     # 断言检查：输出 case_ids 顺序必须与传入的 case_id_list 一致
     assert np.array_equal(final_case_ids, np.array(case_id_list, dtype=int)), (
         f"case_ids 序列不匹配: 输出{final_case_ids[:5]} vs 输入{case_id_list[:5]}"
     )
-
     np.savez(
         output_path,
         case_ids=final_case_ids,
@@ -152,8 +160,8 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 
 if __name__ == '__main__':
     pulse_dir = r'G:\VCS_acc_data\acc_data_before1111_6134'
-    params_path = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_1220.csv'
-    output_dir = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\DL_project_InjuryPredict\data'
+    params_path = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_1224.csv'
+    output_dir = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\LX-model-InjuryPredict\data'
     # 读取distribution文件
     if params_path.endswith('.npz'):
         distribution_npz = np.load(params_path, allow_pickle=True)

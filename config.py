@@ -5,12 +5,12 @@
 
 # 1. 优化与训练相关
 training_params = {
-    "Epochs": 450,
-    "Batch_size": 512,
-    "Learning_rate": 0.02,
-    "Learning_rate_min": 1e-6,
+    "Epochs": 250,
+    "Batch_size": 64,
+    "Learning_rate": 0.005,
+    "Learning_rate_min": 0,
     "weight_decay": 0.1,
-    "Patience": 1000, # 早停轮数
+    "Patience": 50, # 早停轮数
 }
 
 # 2. 损失函数相关
@@ -18,7 +18,7 @@ loss_params = {
     "base_loss": "mae",
     "weight_factor_classify": 1.1,
     "weight_factor_sample": 0.2,
-    "loss_weights": (0.2, 1.0, 20.0), # HIC, Dmax, Nij 各自损失的权重
+    "loss_weights": (0.5, 1.0, 20.0), # HIC, Dmax, Nij 各自损失的权重
 }
 
 # 3. 模型结构相关
@@ -29,8 +29,8 @@ model_params = {
     "tcn_channels_list": [32, 64, 128],  # 每个 TCN 块的输出通道数
     "tcn_output_dim": 128,  # TCN 编码器的输出特征维度
     "num_layers_of_mlpE": 3,
-    "num_layers_of_mlpD": 3,
-    "mlpE_hidden": 128,
+    "num_layers_of_mlpD": 2,
+    "mlpE_hidden": 256,
     "mlpD_hidden": 128,
     "mlp_encoder_output_dim": 128,  # MLP 编码器的输出特征维度
     "mlp_decoder_output_dim": 128,  # MLP 解码器的输出特征维度

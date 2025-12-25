@@ -32,7 +32,7 @@ except ImportError as e:
 
 # 获取项目根目录（更可靠的方式）
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # utils 目录
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)  # DL_project_InjuryPredict 目录
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)  # LX-model-InjuryPredict 目录
 
 # 1.1) 存放 .pt 数据集的目录
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")

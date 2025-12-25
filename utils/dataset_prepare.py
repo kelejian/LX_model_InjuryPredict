@@ -352,6 +352,7 @@ def split_data(dataset, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1, special_
     }
         
     return final_train_indices, final_val_indices, final_test_indices, split_summary
+
 if __name__ == '__main__':
     start_time = time.time()
     
@@ -374,9 +375,9 @@ if __name__ == '__main__':
     train_indices, val_indices, test_indices, split_summary = split_data(
         dataset, 
         train_ratio=0.8, 
-        val_ratio=0.19, 
-        test_ratio=0.01,
-        special_case_assignments=special_assignments # 传入新参数
+        val_ratio=0.1, 
+        test_ratio=0.1,
+        special_case_assignments=special_assignments
     )
     
     processor = DataProcessor(top_k_waveform=50)

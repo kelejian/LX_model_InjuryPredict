@@ -322,11 +322,11 @@ if __name__ == "__main__":
             
             writer.add_scalar("ChannelAttention_Train/X_Direction_MeanWeight", mean_weights[0], epoch)
             writer.add_scalar("ChannelAttention_Train/Y_Direction_MeanWeight", mean_weights[1], epoch)
-            writer.add_scalar("ChannelAttention_Train/Z_Direction_MeanWeight", mean_weights[2], epoch)
+            # writer.add_scalar("ChannelAttention_Train/Z_Direction_MeanWeight", mean_weights[2], epoch)
 
             writer.add_scalar("ChannelAttention_Train/X_Direction_Std", std_weights[0], epoch)
             writer.add_scalar("ChannelAttention_Train/Y_Direction_Std", std_weights[1], epoch)
-            writer.add_scalar("ChannelAttention_Train/Z_Direction_Std", std_weights[2], epoch)
+            # writer.add_scalar("ChannelAttention_Train/Z_Direction_Std", std_weights[2], epoch)
             
             weight_variance = torch.var(mean_weights).item()
             writer.add_scalar("ChannelAttention_Train/Weight_Variance", weight_variance, epoch)
@@ -352,11 +352,11 @@ if __name__ == "__main__":
             
             writer.add_scalar("ChannelAttention_Val/X_Direction_Weight", mean_weights[0], epoch)
             writer.add_scalar("ChannelAttention_Val/Y_Direction_Weight", mean_weights[1], epoch)
-            writer.add_scalar("ChannelAttention_Val/Z_Direction_Weight", mean_weights[2], epoch)
+            # writer.add_scalar("ChannelAttention_Val/Z_Direction_Weight", mean_weights[2], epoch)
             
             writer.add_scalar("ChannelAttention_Val/X_Direction_Std", std_weights[0], epoch)
             writer.add_scalar("ChannelAttention_Val/Y_Direction_Std", std_weights[1], epoch)
-            writer.add_scalar("ChannelAttention_Val/Z_Direction_Std", std_weights[2], epoch)
+            # writer.add_scalar("ChannelAttention_Val/Z_Direction_Std", std_weights[2], epoch)
             
             weight_variance = torch.var(mean_weights).item()
             writer.add_scalar("ChannelAttention_Val/Weight_Variance", weight_variance, epoch)
@@ -371,11 +371,12 @@ if __name__ == "__main__":
                 if epoch_weights is not None:
                     writer.add_histogram("ChannelAttention_Val/X_Direction_Distribution", epoch_weights[:, 0], epoch)
                     writer.add_histogram("ChannelAttention_Val/Y_Direction_Distribution", epoch_weights[:, 1], epoch)
-                    writer.add_histogram("ChannelAttention_Val/Z_Direction_Distribution", epoch_weights[:, 2], epoch)
+                    # writer.add_histogram("ChannelAttention_Val/Z_Direction_Distribution", epoch_weights[:, 2], epoch)
             
             # 打印权重信息到控制台
             if epoch % 50 == 0 or epoch == Epochs - 1:
-                print(f"            | Val Channel Weights: X={mean_weights[0]:.3f}, Y={mean_weights[1]:.3f}, Z={mean_weights[2]:.3f}")
+                # print(f"            | Val Channel Weights: X={mean_weights[0]:.3f}, Y={mean_weights[1]:.3f}, Z={mean_weights[2]:.3f}")
+                print(f"            | Val Channel Weights: X={mean_weights[0]:.3f}, Y={mean_weights[1]:.3f}")
                 print(f"            | Val Weight Variance: {weight_variance:.4f}")
 
 
@@ -409,15 +410,14 @@ if __name__ == "__main__":
 
         # 早停逻辑
         if epoch > Epochs * 0.4 and len(val_loss_history) >= Patience:
-            recent_losses = val_loss_history[-Patience:]
-            recent_accu = val_mais_accu_history[-Patience:]
-            recent_accu_chest = val_chest_accu_history[-Patience:]
+            # 检查最佳指标是否在最近 Patience 个 epoch 之外
+            epochs_since_best_loss = epoch + 1 - best_loss_epoch
+            epochs_since_best_mais = epoch + 1 - best_MAIS_accu_epoch
+            epochs_since_best_head = epoch + 1 - best_head_epoch
             
-            loss_no_improve = all(loss >= Best_val_loss for loss in recent_losses)
-            accu_no_improve = all(accu <= Best_mais_accu for accu in recent_accu)
-            chest_accu_no_improve = all(accu <= Best_chest_accu for accu in recent_accu_chest)
-
-            if loss_no_improve and accu_no_improve and chest_accu_no_improve:
+            if (epochs_since_best_loss >= Patience and 
+                epochs_since_best_mais >= Patience and 
+                epochs_since_best_head >= Patience):
                 print(f"Early Stop at epoch: {epoch+1}!")
                 print(f"Best MAIS accuracy: {Best_mais_accu:.2f}% (at epoch {best_MAIS_accu_epoch})")
                 print(f"Lowest Val Loss: {Best_val_loss:.3f} (at epoch {best_loss_epoch})")
