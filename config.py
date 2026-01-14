@@ -16,7 +16,7 @@ training_params = {
 # 2. 损失函数相关
 loss_params = {
     "base_loss": "mae",
-    "weight_factor_classify": 1.05,
+    "weight_factor_classify": 1.0,
     "weight_factor_sample": 0.2,
     "loss_weights": (0.5, 1.0, 20.0), # HIC, Dmax, Nij 各自损失的权重
 }

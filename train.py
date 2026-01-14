@@ -12,7 +12,7 @@ import numpy as np
 from torch import nn
 from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error, accuracy_score
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error, accuracy_score, r2_score
 
 from utils import models
 from utils.weighted_loss import weighted_loss
@@ -103,6 +103,9 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
         'mae_hic': mean_absolute_error(true_hic, pred_hic), 'rmse_hic': root_mean_squared_error(true_hic, pred_hic),
         'mae_dmax': mean_absolute_error(true_dmax, pred_dmax), 'rmse_dmax': root_mean_squared_error(true_dmax, pred_dmax),
         'mae_nij': mean_absolute_error(true_nij, pred_nij), 'rmse_nij': root_mean_squared_error(true_nij, pred_nij),
+        'r2_hic': r2_score(true_hic, pred_hic),
+        'r2_dmax': r2_score(true_dmax, pred_dmax),
+        'r2_nij': r2_score(true_nij, pred_nij),
     }
     return metrics
 
@@ -217,7 +220,9 @@ if __name__ == "__main__":
     Best_val_loss = float('inf')
     Best_mais_accu, Best_chest_accu, Best_head_accu, Best_neck_accu = 0, 0, 0, 0
     Best_dmax_mae, Best_hic_mae, Best_nij_mae = float('inf'), float('inf'), float('inf')
+    Best_hic_r2, Best_dmax_r2, Best_nij_r2 = float('-inf'), float('-inf'), float('-inf')
     best_loss_epoch, best_MAIS_accu_epoch, best_dmax_epoch, best_nij_epoch, best_chest_epoch, best_hic_epoch, best_head_epoch, best_neck_epoch = 0, 0, 0, 0, 0, 0, 0, 0
+    best_hic_r2_epoch, best_dmax_r2_epoch, best_nij_r2_epoch = 0, 0, 0
 
     # 保存初始配置到 JSON 文件
     record_path = os.path.join(run_dir, "TrainingRecord.json")
@@ -302,6 +307,7 @@ if __name__ == "__main__":
         print(f"Epoch {epoch+1}/{Epochs} | Train Loss: {train_metrics['loss']:.3f}")
         print(f"            | Val Loss: {val_metrics['loss']:.3f} | MAIS Acc: {val_metrics['accu_mais']:.2f}%")
         print(f"            | Head Acc: {val_metrics['accu_head']:.2f}%, Chest Acc: {val_metrics['accu_chest']:.2f}%, Neck Acc: {val_metrics['accu_neck']:.2f}%")
+        print(f"            | R²: HIC={val_metrics['r2_hic']:.4f}, Dmax={val_metrics['r2_dmax']:.4f}, Nij={val_metrics['r2_nij']:.4f}")
         
         scheduler.step()
 
@@ -314,6 +320,9 @@ if __name__ == "__main__":
         writer.add_scalar("MAE_Train/Train_HIC", train_metrics['mae_hic'], epoch)
         writer.add_scalar("MAE_Train/Train_Dmax", train_metrics['mae_dmax'], epoch)
         writer.add_scalar("MAE_Train/Train_Nij", train_metrics['mae_nij'], epoch)
+        writer.add_scalar("R2_Train/HIC", train_metrics['r2_hic'], epoch)
+        writer.add_scalar("R2_Train/Dmax", train_metrics['r2_dmax'], epoch)
+        writer.add_scalar("R2_Train/Nij", train_metrics['r2_nij'], epoch)
 
         # TensorBoard 记录训练时的通道注意力权重
         if train_attention_stats is not None:
@@ -344,6 +353,9 @@ if __name__ == "__main__":
         writer.add_scalar("MAE_Val/HIC", val_metrics['mae_hic'], epoch)
         writer.add_scalar("MAE_Val/Dmax", val_metrics['mae_dmax'], epoch)
         writer.add_scalar("MAE_Val/Nij", val_metrics['mae_nij'], epoch)
+        writer.add_scalar("R2_Val/HIC", val_metrics['r2_hic'], epoch)
+        writer.add_scalar("R2_Val/Dmax", val_metrics['r2_dmax'], epoch)
+        writer.add_scalar("R2_Val/Nij", val_metrics['r2_nij'], epoch)
 
         # TensorBoard 记录验证时的通道注意力权重
         if val_attention_stats is not None:
@@ -390,6 +402,9 @@ if __name__ == "__main__":
             ('accu_head', 'Best_head_accu', 'best_head_epoch', 'best_head_accu.pth', 'Head Acc: {:.2f}%', max),
             ('mae_nij', 'Best_nij_mae', 'best_nij_epoch', 'best_nij_mae.pth', 'Nij MAE: {:.3f}', min),
             ('accu_neck', 'Best_neck_accu', 'best_neck_epoch', 'best_neck_accu.pth', 'Neck Acc: {:.2f}%', max),
+            ('r2_hic', 'Best_hic_r2', 'best_hic_r2_epoch', 'best_hic_r2.pth', 'HIC R²: {:.4f}', max),
+            ('r2_dmax', 'Best_dmax_r2', 'best_dmax_r2_epoch', 'best_dmax_r2.pth', 'Dmax R²: {:.4f}', max),
+            ('r2_nij', 'Best_nij_r2', 'best_nij_r2_epoch', 'best_nij_r2.pth', 'Nij R²: {:.4f}', max),
         ]
         
         for metric_key, best_var, epoch_var, filename, format_str, compare_func in model_save_configs:
@@ -449,6 +464,12 @@ if __name__ == "__main__":
         "best_hic_mae_epoch": int(best_hic_epoch),
         "best_nij_mae": np.round(float(Best_nij_mae), 3),
         "best_nij_mae_epoch": int(best_nij_epoch),
+        "best_hic_r2": np.round(float(Best_hic_r2), 4),
+        "best_hic_r2_epoch": int(best_hic_r2_epoch),
+        "best_dmax_r2": np.round(float(Best_dmax_r2), 4),
+        "best_dmax_r2_epoch": int(best_dmax_r2_epoch),
+        "best_nij_r2": np.round(float(Best_nij_r2), 4),
+        "best_nij_r2_epoch": int(best_nij_r2_epoch),
 
         "lowest_val_loss": np.round(float(Best_val_loss), 3),
         "lowest_val_loss_epoch": int(best_loss_epoch),
@@ -462,6 +483,9 @@ if __name__ == "__main__":
             "mae_hic": np.round(float(val_metrics['mae_hic']), 2),
             "mae_dmax": np.round(float(val_metrics['mae_dmax']), 2),
             "mae_nij": np.round(float(val_metrics['mae_nij']), 3),
+            "r2_hic": np.round(float(val_metrics['r2_hic']), 4),
+            "r2_dmax": np.round(float(val_metrics['r2_dmax']), 4),
+            "r2_nij": np.round(float(val_metrics['r2_nij']), 4),
         }
     }
     

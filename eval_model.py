@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 
 from utils import models
 from utils.dataset_prepare import CrashDataset
-from utils.AIS_cal import AIS_3_cal_head, AIS_cal_head, AIS_cal_chest, AIS_cal_neck 
+from utils.AIS_cal import AIS_cal_head, AIS_cal_chest, AIS_cal_neck 
 
 from utils.set_random_seed import set_random_seed
 set_random_seed()
@@ -224,8 +224,6 @@ if __name__ == "__main__":
     mais_pred = np.maximum.reduce([AIS_cal_head(pred_hic), AIS_cal_chest(pred_dmax), AIS_cal_neck(pred_nij)])
     cls_metrics_mais = get_classification_metrics(ground_truths['mais'], mais_pred, [0, 1, 2, 3, 4, 5])
     
-    # HIC 特有的 AIS-3C 指标
-    cls_metrics_hic_3c = get_classification_metrics(AIS_3_cal_head(true_hic), AIS_3_cal_head(pred_hic), [0, 1, 3])
 
     # --- 4. 生成并保存所有可视化图表 ---
     plot_scatter(true_hic, pred_hic, ground_truths['ais_head'], 'Head Injury Criterion (HIC)', 'HIC', os.path.join(args.run_dir, "scatter_plot_HIC.png"))
@@ -236,7 +234,6 @@ if __name__ == "__main__":
     plot_confusion_matrix(cls_metrics_chest['conf_matrix'], [0, 2, 3, 4, 5], 'Confusion Matrix - AIS Chest (5C)', os.path.join(args.run_dir, "cm_chest_5c.png"))
     plot_confusion_matrix(cls_metrics_neck['conf_matrix'], [0, 2, 3, 4, 5], 'Confusion Matrix - AIS Neck (5C)', os.path.join(args.run_dir, "cm_neck_5c.png"))
     plot_confusion_matrix(cls_metrics_mais['conf_matrix'], [0, 1, 2, 3, 4, 5], 'Confusion Matrix - MAIS (6C)', os.path.join(args.run_dir, "cm_mais_6c.png"))
-    plot_confusion_matrix(cls_metrics_hic_3c['conf_matrix'], [0, 1, 3], 'Confusion Matrix - AIS Head (3C)', os.path.join(args.run_dir, "cm_head_3c.png"))
     print(f"All plots have been saved to {args.run_dir}")
 
     # 模型参数量
@@ -271,7 +268,7 @@ if __name__ == "__main__":
 
 ---
 """
-    markdown_content += generate_report_section("Head (HIC)", reg_metrics_hic, cls_metrics_head, cls_metrics_hic_3c)
+    markdown_content += generate_report_section("Head (HIC)", reg_metrics_hic, cls_metrics_head)
     markdown_content += "---\n"
     markdown_content += generate_report_section("Chest (Dmax)", reg_metrics_dmax, cls_metrics_chest)
     markdown_content += "---\n"

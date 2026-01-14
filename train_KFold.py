@@ -118,6 +118,9 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
         'mae_hic': mean_absolute_error(true_hic, pred_hic), 'rmse_hic': root_mean_squared_error(true_hic, pred_hic),
         'mae_dmax': mean_absolute_error(true_dmax, pred_dmax), 'rmse_dmax': root_mean_squared_error(true_dmax, pred_dmax),
         'mae_nij': mean_absolute_error(true_nij, pred_nij), 'rmse_nij': root_mean_squared_error(true_nij, pred_nij),
+        'r2_hic': r2_score(true_hic, pred_hic),
+        'r2_dmax': r2_score(true_dmax, pred_dmax),
+        'r2_nij': r2_score(true_nij, pred_nij),
     }
     return metrics
 
@@ -600,6 +603,9 @@ if __name__ == "__main__":
             writer.add_scalar("MAE_Train/Train_HIC", train_metrics['mae_hic'], epoch)
             writer.add_scalar("MAE_Train/Train_Dmax", train_metrics['mae_dmax'], epoch)
             writer.add_scalar("MAE_Train/Train_Nij", train_metrics['mae_nij'], epoch)
+            writer.add_scalar("R2_Train/HIC", train_metrics['r2_hic'], epoch)
+            writer.add_scalar("R2_Train/Dmax", train_metrics['r2_dmax'], epoch)
+            writer.add_scalar("R2_Train/Nij", train_metrics['r2_nij'], epoch)
 
             # 验证指标
             writer.add_scalar("Loss/Val", val_metrics['loss'], epoch)
@@ -610,6 +616,9 @@ if __name__ == "__main__":
             writer.add_scalar("MAE_Val/HIC", val_metrics['mae_hic'], epoch)
             writer.add_scalar("MAE_Val/Dmax", val_metrics['mae_dmax'], epoch)
             writer.add_scalar("MAE_Val/Nij", val_metrics['mae_nij'], epoch)
+            writer.add_scalar("R2_Val/HIC", val_metrics['r2_hic'], epoch)
+            writer.add_scalar("R2_Val/Dmax", val_metrics['r2_dmax'], epoch)
+            writer.add_scalar("R2_Val/Nij", val_metrics['r2_nij'], epoch)
 
             # --- 跟踪当前 Fold 的最佳模型 (为每个指标) ---
             for metric_name, state in fold_metric_states.items():
@@ -686,6 +695,12 @@ if __name__ == "__main__":
             'std_mae_dmax': metrics_df['mae_dmax'].std(),
             'mean_mae_nij': metrics_df['mae_nij'].mean(),
             'std_mae_nij': metrics_df['mae_nij'].std(),
+            'mean_r2_hic': metrics_df['r2_hic'].mean(),
+            'std_r2_hic': metrics_df['r2_hic'].std(),
+            'mean_r2_dmax': metrics_df['r2_dmax'].mean(),
+            'std_r2_dmax': metrics_df['r2_dmax'].std(),
+            'mean_r2_nij': metrics_df['r2_nij'].mean(),
+            'std_r2_nij': metrics_df['r2_nij'].std(),
         }
         
         # 如果有详细评估结果，也计算其统计
@@ -707,6 +722,10 @@ if __name__ == "__main__":
         print(f"  HIC MAE   : {summary_for_metric['mean_mae_hic']:.3f} +/- {summary_for_metric['std_mae_hic']:.3f}")
         print(f"  Dmax MAE  : {summary_for_metric['mean_mae_dmax']:.3f} +/- {summary_for_metric['std_mae_dmax']:.3f}")
         print(f"  Nij MAE   : {summary_for_metric['mean_mae_nij']:.3f} +/- {summary_for_metric['std_mae_nij']:.3f}")
+        # 打印 R² 指标
+        print(f"  HIC R²    : {summary_for_metric['mean_r2_hic']:.4f} +/- {summary_for_metric['std_r2_hic']:.4f}")
+        print(f"  Dmax R²   : {summary_for_metric['mean_r2_dmax']:.4f} +/- {summary_for_metric['std_r2_dmax']:.4f}")
+        print(f"  Nij R²    : {summary_for_metric['mean_r2_nij']:.4f} +/- {summary_for_metric['std_r2_nij']:.4f}")
 
     
     print("="*60)
@@ -722,6 +741,7 @@ if __name__ == "__main__":
         final_kfold_record = initial_kfold_record
 
     # 添加按指标分组的结果
+    # kfold_summary_by_metric 和 per_fold_results_by_metric 下记录的所有指标，是基于：特定评估指标（val_metrics_to_track中的）最优模型checkpoint的完整评估结果，不是各个指标历史最优值的独立拼凑
     final_kfold_record["kfold_summary_by_metric"] = convert_numpy_types(kfold_summary)
     final_kfold_record["per_fold_results_by_metric"] = convert_numpy_types({
         metric_name: {
