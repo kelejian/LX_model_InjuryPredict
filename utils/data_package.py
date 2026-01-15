@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 try:
-    from utils.AIS_cal import AIS_3_cal_head, AIS_cal_head, AIS_cal_chest, AIS_cal_neck  # 作为包导入时使用
+    from utils.AIS_cal import AIS_cal_head, AIS_cal_chest, AIS_cal_neck  # 作为包导入时使用
 except ImportError:
-    from AIS_cal import AIS_3_cal_head, AIS_cal_head, AIS_cal_chest, AIS_cal_neck   # 直接运行时使用
+    from AIS_cal import AIS_cal_head, AIS_cal_chest, AIS_cal_neck   # 直接运行时使用
 
 # ============================================================================
 CASE_ID_OFFSET = 50000  # 副驾侧case_id在主驾侧基础上加50000
@@ -160,7 +160,7 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 
 if __name__ == '__main__':
     pulse_dir = r'G:\VCS_acc_data\acc_data_before1111_6134'
-    params_path = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0114_V2.csv'
+    params_path = r'E:\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0114_V2.csv'
     output_dir = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\LX-model-InjuryPredict\data'
     # 读取distribution文件
     if params_path.endswith('.npz'):
@@ -184,8 +184,6 @@ if __name__ == '__main__':
     nij_labels = filtered_df['Nij'].astype(float).values
 
     # 计算对应的AIS标签
-    ais3_head_labels = AIS_3_cal_head(hic15_labels)
-
     ais_head_labels = AIS_cal_head(hic15_labels)
     ais_chest_labels = AIS_cal_chest(dmax_labels)
     ais_neck_labels = AIS_cal_neck(nij_labels)
@@ -197,21 +195,20 @@ if __name__ == '__main__':
     
     # 统计三种损伤值的AIS标签分布
     unique, counts = np.unique(ais_head_labels, return_counts=True)
-    label_distribution = dict(zip(unique, counts))
+    label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
     print(f"AIS头部标签分布: {label_distribution}")
 
     unique, counts = np.unique(ais_chest_labels, return_counts=True)
-    label_distribution = dict(zip(unique, counts))
+    label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
     print(f"AIS胸部标签分布: {label_distribution}")
 
     unique, counts = np.unique(ais_neck_labels, return_counts=True)
-    label_distribution = dict(zip(unique, counts))
+    label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
     print(f"AIS颈部标签分布: {label_distribution}")
 
     unique, counts = np.unique(mais_labels, return_counts=True)
-    label_distribution = dict(zip(unique, counts))
+    label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
     print(f"MAIS标签分布: {label_distribution}")
-
     ############################################################################################
     # 绘制碰撞速度和HIC/Dmax/Nij的散点图
     import matplotlib.pyplot as plt

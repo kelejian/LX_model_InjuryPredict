@@ -44,7 +44,7 @@ model_params = {
 kfold_params = {
     "K": 5, # K-Fold 折数
     "val_metrics_to_track": [
-        ("accu_mais", "max"),  # (指标名, 比较方式: "max" 或 "min")
+        # ("accu_mais", "max"),  # (指标名, 比较方式: "max" 或 "min")
         ("loss", "min"),
     ]
 }

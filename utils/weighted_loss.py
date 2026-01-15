@@ -60,30 +60,43 @@ def Piecewise_linear(y_true, y_pred, params, weight_add_mid=1.0):
     return weight_adds
 
 class weighted_loss(nn.Module): 
-    def __init__(self, base_loss="mae", weight_factor_classify=1.1, weight_factor_sample=1.0, loss_weights=(1.0, 1.0, 1.0)):
+    def __init__(self, base_loss="mae", weight_factor_classify=1.1, weight_factor_sample=1.0, 
+                 loss_weights=(1.0, 1.0, 1.0), huber_deltas=(30.0, 2.0, 0.05)):
         super(weighted_loss, self).__init__()
         '''
-        base_loss: str, 基础损失函数 'mse' 或 'mae'
+        base_loss: str, 基础损失函数 'mse', 'mae' 或 'huber'
         weight_factor_classify: float, 基于AIS分类的样本权重系数
         weight_factor_sample: float, 中间值样本的权重系数, 用于分段线性函数
         loss_weights: tuple, (w_hic, w_dmax, w_nij) 三个任务损失的权重
+        huber_deltas: tuple, (delta_hic, delta_dmax, delta_nij) 分别对应三个任务的 Huber 阈值
         '''
 
+        self.base_loss_name = base_loss # 记录名称以便判断
+        
         if base_loss == "mse":
-            self.base_loss = nn.MSELoss(reduction='none')
+            common_loss = nn.MSELoss(reduction='none')
+            self.loss_funcs = [common_loss, common_loss, common_loss]
         elif base_loss == "mae":
-            self.base_loss = nn.L1Loss(reduction='none')
+            common_loss = nn.L1Loss(reduction='none')
+            self.loss_funcs = [common_loss, common_loss, common_loss]
+        elif base_loss == "huber":
+            # 为每个任务分别实例化不同 delta 的 HuberLoss
+            self.loss_funcs = [
+                nn.HuberLoss(reduction='none', delta=huber_deltas[0]), # HIC
+                nn.HuberLoss(reduction='none', delta=huber_deltas[1]), # Dmax
+                nn.HuberLoss(reduction='none', delta=huber_deltas[2])  # Nij
+            ]
         else:
-            raise ValueError("base_loss should be 'mse' or 'mae'.")
+            raise ValueError("base_loss should be 'mse', 'mae' or 'huber'.")
         
         self.weight_factor_classify = weight_factor_classify
         self.weight_factor_sample = weight_factor_sample
         self.loss_weights = loss_weights
         
         # --- 为每个损伤部位定义分段加权超参数 ---
-        self.params_head = {'a': 50, 'b': 1700, 'c': 1850, 'd': 2000, 't': -0.5}
-        self.params_chest = {'a': 4.0, 'b': 180, 'c': 190, 'd': 210, 't': -0.5}
-        self.params_neck = {'a': 0.2, 'b': 2.1, 'c': 2.4, 'd': 2.7, 't': -0.5}
+        self.params_head = {'a': 80, 'b': 1500, 'c': 1750, 'd': 2000, 't': -0.5}
+        self.params_chest = {'a': 10.0, 'b': 75, 'c': 85, 'd': 100, 't': -0.5}
+        self.params_neck = {'a': 0.15, 'b': 1.5, 'c': 1.7, 'd': 1.9, 't': -0.5}
  
     def weighted_function(self, pred, true, injury_type):
         """
@@ -136,17 +149,17 @@ class weighted_loss(nn.Module):
         true_hic, true_dmax, true_nij = true[:, 0], true[:, 1], true[:, 2]
 
         # --- 分别计算每个任务的加权损失 ---
-        # HIC Loss
+        # HIC Loss (使用 self.loss_funcs[0])
         weights_hic = self.weighted_function(pred_hic, true_hic, 'head')
-        loss_hic = (self.base_loss(pred_hic, true_hic) * weights_hic).mean()
+        loss_hic = (self.loss_funcs[0](pred_hic, true_hic) * weights_hic).mean()
 
-        # Dmax Loss
+        # Dmax Loss (使用 self.loss_funcs[1])
         weights_dmax = self.weighted_function(pred_dmax, true_dmax, 'chest')
-        loss_dmax = (self.base_loss(pred_dmax, true_dmax) * weights_dmax).mean()
+        loss_dmax = (self.loss_funcs[1](pred_dmax, true_dmax) * weights_dmax).mean()
 
-        # Nij Loss
+        # Nij Loss (使用 self.loss_funcs[2])
         weights_nij = self.weighted_function(pred_nij, true_nij, 'neck')
-        loss_nij = (self.base_loss(pred_nij, true_nij) * weights_nij).mean()
+        loss_nij = (self.loss_funcs[2](pred_nij, true_nij) * weights_nij).mean()
         
         # --- 使用预设权重合并总损失 ---
         w_hic, w_dmax, w_nij = self.loss_weights

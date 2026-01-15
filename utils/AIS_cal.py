@@ -55,7 +55,7 @@ def AIS_cal_head(
 def AIS_cal_chest(
     Dmax: Union[float, np.ndarray], 
     ais_level: int = 3,
-    prob_thresholds: list = [0.05, 0.1, 0.2, 0.3, 0.4]
+    prob_thresholds: list = [0.06, 0.1, 0.2, 0.3, 0.4]
 ) -> np.ndarray:
     """
     根据胸部压缩量 Dmax (mm) 计算胸部 AIS 等级。
@@ -64,7 +64,7 @@ def AIS_cal_chest(
         Dmax (Union[float, np.ndarray]): 胸部最大压缩量 (mm)。
         ais_level (int): 使用的风险曲线 P(AIS≥n) 中的 n，范围 2-5。
         prob_thresholds (list): 概率阈值列表，用于划分 AIS 等级。
-            例如 [0.05, 0.1, 0.2, 0.3, 0.4] 表示:
+            例如 [0.06, 0.1, 0.2, 0.3, 0.4] 表示:
             P < 0.05: AIS=0, 0.05≤P<0.1: AIS=1, 0.1≤P<0.2: AIS=2,
             0.2≤P<0.3: AIS=3, 0.3≤P<0.4: AIS=4, P≥0.4: AIS=5
 
@@ -103,7 +103,7 @@ def AIS_cal_chest(
 def AIS_cal_neck(
     Nij: Union[float, np.ndarray], 
     ais_level: int = 3,
-    prob_thresholds: list = [0.05, 0.1, 0.2, 0.3, 0.4]
+    prob_thresholds: list = [0.06, 0.1, 0.2, 0.3, 0.4]
 ) -> np.ndarray:
     """
     根据颈部伤害指数 Nij 计算颈部 AIS 等级。
@@ -112,7 +112,7 @@ def AIS_cal_neck(
         Nij (Union[float, np.ndarray]): Nij 值。
         ais_level (int): 使用的风险曲线 P(AIS≥n) 中的 n，范围 2-5。
         prob_thresholds (list): 概率阈值列表，用于划分 AIS 等级。
-            例如 [0.05, 0.1, 0.2, 0.3, 0.4] 表示:
+            例如 [0.06, 0.1, 0.2, 0.3, 0.4] 表示:
             P < 0.05: AIS=0, 0.05≤P<0.1: AIS=1, 0.1≤P<0.2: AIS=2,
             0.2≤P<0.3: AIS=3, 0.3≤P<0.4: AIS=4, P≥0.4: AIS=5
 

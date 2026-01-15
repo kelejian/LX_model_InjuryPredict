@@ -76,8 +76,8 @@ if __name__ == "__main__":
     
     # 加载数据集
     dataset = CrashDataset()
-    test_dataset1 = torch.load("./data/val_dataset.pt")
-    test_dataset2 = torch.load("./data/test_dataset.pt")
+    test_dataset1 = torch.load("./data/val_dataset.pt", weights_only=False)
+    test_dataset2 = torch.load("./data/test_dataset.pt", weights_only=False)
     test_dataset = ConcatDataset([test_dataset1, test_dataset2])
     test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=0)
 

@@ -15,7 +15,6 @@ import time
 from datetime import datetime
 import torch
 import numpy as np
-from torch import nn
 from torch.utils.data import DataLoader, Subset, ConcatDataset # 引入 Subset 和 ConcatDataset
 import torch.optim as optim
 import pandas as pd
@@ -347,7 +346,7 @@ def convert_numpy_types(obj):
         return tuple(convert_numpy_types(item) for item in obj)
     elif isinstance(obj, (np.integer, np.int_)):
         return int(obj)
-    elif isinstance(obj, (np.floating, np.float_)):
+    elif isinstance(obj, (np.floating, np.float64)):
         return float(obj)
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
@@ -410,9 +409,9 @@ if __name__ == "__main__":
     # --- 3. 加载由 dataset_prepare.py 生成的数据 ---
     print("正在加载 pt dataset ...")
     try:
-        train_subset_orig = torch.load("./data/train_dataset.pt")
-        val_subset_orig = torch.load("./data/val_dataset.pt")
-        test_subset_orig = torch.load("./data/test_dataset.pt")
+        train_subset_orig = torch.load("./data/train_dataset.pt", weights_only=False)
+        val_subset_orig = torch.load("./data/val_dataset.pt", weights_only=False)
+        test_subset_orig = torch.load("./data/test_dataset.pt",weights_only=False)
     except FileNotFoundError as e:
         print(f"错误: {e}")
         print("请确保 './data/' 目录下存在 train_dataset.pt 和 val_dataset.pt 文件。")

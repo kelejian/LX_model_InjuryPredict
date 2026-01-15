@@ -183,8 +183,8 @@ if __name__ == "__main__":
     from dataclasses import dataclass
     @dataclass
     class args:
-        run_dir: str = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\LX-model-InjuryPredict\runs\InjuryPredictModel_12251027'
-        weight_file: str = 'best_hic_mae.pth'
+        run_dir: str = r'E:\课题组相关\理想项目\LX-model-InjuryPredict\runs\InjuryPredictModel_KFold_01142310\Fold_1'
+        weight_file: str = 'best_loss_model.pth'
 
     # --- 1. 加载模型和数据 ---
     with open(os.path.join(args.run_dir, "TrainingRecord.json"), "r") as f:
@@ -192,9 +192,9 @@ if __name__ == "__main__":
     
     model_params = training_record["hyperparameters"]["model"]
     
-    train_dataset = torch.load("./data/train_dataset.pt") # 仅用于获取 num_classes_of_discrete
-    test_dataset1 = torch.load("./data/val_dataset.pt")
-    test_dataset2 = torch.load("./data/test_dataset.pt")
+    train_dataset = torch.load("./data/train_dataset.pt", weights_only=False) # 仅用于获取 num_classes_of_discrete
+    test_dataset1 = torch.load("./data/val_dataset.pt", weights_only=False)
+    test_dataset2 = torch.load("./data/test_dataset.pt", weights_only=False)
     test_dataset = ConcatDataset([test_dataset1, test_dataset2])
     test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=0)
 
@@ -231,8 +231,8 @@ if __name__ == "__main__":
     plot_scatter(true_nij, pred_nij, ground_truths['ais_neck'], 'Neck Injury Criterion (Nij)', 'Nij', os.path.join(args.run_dir, "scatter_plot_Nij.png"))
 
     plot_confusion_matrix(cls_metrics_head['conf_matrix'], [0, 1, 2, 3, 4, 5], 'Confusion Matrix - AIS Head (6C)', os.path.join(args.run_dir, "cm_head_6c.png"))
-    plot_confusion_matrix(cls_metrics_chest['conf_matrix'], [0, 2, 3, 4, 5], 'Confusion Matrix - AIS Chest (5C)', os.path.join(args.run_dir, "cm_chest_5c.png"))
-    plot_confusion_matrix(cls_metrics_neck['conf_matrix'], [0, 2, 3, 4, 5], 'Confusion Matrix - AIS Neck (5C)', os.path.join(args.run_dir, "cm_neck_5c.png"))
+    plot_confusion_matrix(cls_metrics_chest['conf_matrix'], [0, 1, 2, 3, 4, 5], 'Confusion Matrix - AIS Chest (5C)', os.path.join(args.run_dir, "cm_chest_6c.png"))
+    plot_confusion_matrix(cls_metrics_neck['conf_matrix'], [0, 1, 2, 3, 4, 5], 'Confusion Matrix - AIS Neck (5C)', os.path.join(args.run_dir, "cm_neck_6c.png"))
     plot_confusion_matrix(cls_metrics_mais['conf_matrix'], [0, 1, 2, 3, 4, 5], 'Confusion Matrix - MAIS (6C)', os.path.join(args.run_dir, "cm_mais_6c.png"))
     print(f"All plots have been saved to {args.run_dir}")
 

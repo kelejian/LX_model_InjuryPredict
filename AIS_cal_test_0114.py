@@ -62,7 +62,7 @@ def AIS_cal_head(
 def AIS_cal_chest(
     Dmax: Union[float, np.ndarray], 
     ais_level: int = 3,
-    prob_thresholds: list = [0.05, 0.1, 0.2, 0.3, 0.4]
+    prob_thresholds: list = [0.06, 0.1, 0.2, 0.3, 0.4]
 ) -> np.ndarray:
     """
     根据胸部压缩量 Dmax (mm) 计算胸部 AIS 等级。
@@ -71,7 +71,7 @@ def AIS_cal_chest(
         Dmax (Union[float, np.ndarray]): 胸部最大压缩量 (mm)。
         ais_level (int): 使用的风险曲线 P(AIS≥n) 中的 n，范围 2-5。
         prob_thresholds (list): 概率阈值列表，用于划分 AIS 等级。
-            例如 [0.05, 0.1, 0.2, 0.3, 0.4] 表示:
+            例如 [0.06, 0.1, 0.2, 0.3, 0.4] 表示:
             P < 0.05: AIS=0, 0.05≤P<0.1: AIS=1, 0.1≤P<0.2: AIS=2,
             0.2≤P<0.3: AIS=3, 0.3≤P<0.4: AIS=4, P≥0.4: AIS=5
 
@@ -110,7 +110,7 @@ def AIS_cal_chest(
 def AIS_cal_neck(
     Nij: Union[float, np.ndarray], 
     ais_level: int = 3,
-    prob_thresholds: list = [0.05, 0.1, 0.2, 0.3, 0.4]
+    prob_thresholds: list = [0.06, 0.1, 0.2, 0.3, 0.4]
 ) -> np.ndarray:
     """
     根据颈部伤害指数 Nij 计算颈部 AIS 等级。
@@ -119,7 +119,7 @@ def AIS_cal_neck(
         Nij (Union[float, np.ndarray]): Nij 值。
         ais_level (int): 使用的风险曲线 P(AIS≥n) 中的 n，范围 2-5。
         prob_thresholds (list): 概率阈值列表，用于划分 AIS 等级。
-            例如 [0.05, 0.1, 0.2, 0.3, 0.4] 表示:
+            例如 [0.06, 0.1, 0.2, 0.3, 0.4] 表示:
             P < 0.05: AIS=0, 0.05≤P<0.1: AIS=1, 0.1≤P<0.2: AIS=2,
             0.2≤P<0.3: AIS=3, 0.3≤P<0.4: AIS=4, P≥0.4: AIS=5
 
@@ -280,62 +280,91 @@ def plot_ais_risk_curve(
 # 使用示例
 if __name__ == "__main__":
 
-    # ========== 测试 AIS 计算函数 ==========
-    print("=" * 50)
-    print("测试 AIS 计算函数")
-    print("=" * 50)
+    import torch
+
+    # 1. 检查 CUDA 是否可用
+    is_cuda_available = torch.cuda.is_available()
+    print(f"CUDA 可用性: {is_cuda_available}")
+
+    if is_cuda_available:
+        # 2. 获取当前设备名称
+        print(f"当前 GPU 设备: {torch.cuda.get_device_name(0)}")
+        
+        # 3. 核心验证：检查张量所在的物理设备
+        # 仅仅 is_available 为 True 是不够的，必须确认数据确实在 GPU 上
+        tensor_cpu = torch.tensor([1.0])
+        tensor_gpu = tensor_cpu.to('cuda')
+        
+        print(f"CPU 张量 device 属性: {tensor_cpu.device}") # 预期: cpu
+        print(f"GPU 张量 device 属性: {tensor_gpu.device}") # 预期: cuda:0
+        
+        # 4. 显存分配测试
+        # 分配一个较小的张量，观察 PyTorch 是否能成功调用显存
+        # [1000, 1000] -> 约 4MB 显存
+        try:
+            x = torch.randn(1000, 1000).cuda()
+            print("显存分配测试: 成功")
+        except Exception as e:
+            print(f"显存分配测试: 失败, 错误信息: {e}")
+
+    else:
+        print("未检测到 GPU，请检查 PyTorch 版本是否为 CPU 版本，或显卡驱动是否安装正确。")
+    # # ========== 测试 AIS 计算函数 ==========
+    # print("=" * 50)
+    # print("测试 AIS 计算函数")
+    # print("=" * 50)
     
-    # 测试头部 AIS 计算 (使用 P(AIS>=3) 曲线)
-    # 根据图中交点: HIC15 ≈ 519 -> P=0.02, 632 -> P=0.05, 830 -> P=0.15, 1116 -> P=0.4, 1457 -> P=0.75
-    print("\n--- 头部 AIS 计算测试 (ais_level=3) ---")
-    test_hic_values = [100,200, 500, 600, 700, 900, 1200, 1500]
-    expected_head_ais = [0, 1, 2, 3, 3, 4, 4, 5]
-    for hic, expected in zip(test_hic_values, expected_head_ais):
-        result = AIS_cal_head(hic, ais_level=3, prob_thresholds=[0.02, 0.05, 0.15, 0.4, 0.75])
-        status = "✓" if result == expected else "✗"
-        print(f"HIC15={hic}: AIS={result} (期望={expected}) {status}")
+    # # 测试头部 AIS 计算 (使用 P(AIS>=3) 曲线)
+    # # 根据图中交点: HIC15 ≈ 519 -> P=0.02, 632 -> P=0.05, 830 -> P=0.15, 1116 -> P=0.4, 1457 -> P=0.75
+    # print("\n--- 头部 AIS 计算测试 (ais_level=3) ---")
+    # test_hic_values = [100,200, 500, 600, 700, 900, 1200, 1500]
+    # expected_head_ais = [0, 1, 2, 3, 3, 4, 4, 5]
+    # for hic, expected in zip(test_hic_values, expected_head_ais):
+    #     result = AIS_cal_head(hic)
+    #     status = "✓" if result == expected else "✗"
+    #     print(f"HIC15={hic}: AIS={result} (期望={expected}) {status}")
     
-    # 测试数组输入
-    hic_array = np.array([100,200, 500, 600, 700, 900, 1200, 1500])
-    result_array = AIS_cal_head(hic_array, ais_level=3, prob_thresholds=[0.02, 0.05, 0.15, 0.4, 0.75])
-    print(f"数组测试: HIC15={hic_array} -> AIS={result_array}")
+    # # 测试数组输入
+    # hic_array = np.array([100,200, 500, 600, 700, 900, 1200, 1500])
+    # result_array = AIS_cal_head(hic_array)
+    # print(f"数组测试: HIC15={hic_array} -> AIS={result_array}")
     
-    # 测试胸部 AIS 计算 (使用 P(AIS>=3) 曲线)
-    # 根据图中交点: Dmax ≈ 16 -> P=0.05, 32 -> P=0.1, 49 -> P=0.2, 62 -> P=0.3, 74 -> P=0.4
-    print("\n--- 胸部 AIS 计算测试 (ais_level=3) ---")
-    test_dmax_values = [10, 20, 40, 55,62, 70, 80]
-    expected_chest_ais = [0, 1, 2, 3, 4, 5, 5]
-    for dmax, expected in zip(test_dmax_values, expected_chest_ais):
-        result = AIS_cal_chest(dmax, ais_level=3, prob_thresholds=[0.05, 0.1, 0.2, 0.3, 0.4])
-        status = "✓" if result == expected else "✗"
-        print(f"Dmax={dmax}mm: AIS={result} (期望={expected}) {status}")
-    dmax_array = np.array([10, 20, 40, 55,62, 70, 80])
-    result_array = AIS_cal_chest(dmax_array, ais_level=3, prob_thresholds=[0.05, 0.1, 0.2, 0.3, 0.4])
-    print(f"数组测试: Dmax={dmax_array}mm -> AIS={result_array}")
+    # # 测试胸部 AIS 计算 (使用 P(AIS>=3) 曲线)
+    # # 根据图中交点: Dmax ≈ 16 -> P=0.05, 32 -> P=0.1, 49 -> P=0.2, 62 -> P=0.3, 74 -> P=0.4
+    # print("\n--- 胸部 AIS 计算测试 (ais_level=3) ---")
+    # test_dmax_values = [10, 20, 40, 55,62, 70, 80]
+    # expected_chest_ais = [0, 1, 2, 3, 4, 5, 5]
+    # for dmax, expected in zip(test_dmax_values, expected_chest_ais):
+    #     result = AIS_cal_chest(dmax, ais_level=3)
+    #     status = "✓" if result == expected else "✗"
+    #     print(f"Dmax={dmax}mm: AIS={result} (期望={expected}) {status}")
+    # dmax_array = np.array([10, 20, 40, 55,62, 70, 80])
+    # result_array = AIS_cal_chest(dmax_array, ais_level=3)
+    # print(f"数组测试: Dmax={dmax_array}mm -> AIS={result_array}")
     
-    # 测试颈部 AIS 计算 (使用 P(AIS>=3) 曲线)
-    # 根据图中交点: Nij ≈ 0.15 -> P=0.05, 0.70 -> P=0.1, 1.15 -> P=0.2, 1.45 -> P=0.3, 1.68 -> P=0.4
-    print("\n--- 颈部 AIS 计算测试 (ais_level=3) ---")
-    test_nij_values = [0.1, 0.5, 0.7, 1.0, 1.3, 1.6, 2.0]
-    expected_neck_ais = [0, 1, 2, 3, 4, 5, 5]
-    for nij, expected in zip(test_nij_values, expected_neck_ais):
-        result = AIS_cal_neck(nij, ais_level=3, prob_thresholds=[0.05, 0.1, 0.2, 0.3, 0.4])
-        status = "✓" if result == expected else "✗"
-        print(f"Nij={nij}: AIS={result} (期望={expected}) {status}")
-    nij_array = np.array([0.1, 0.5, 0.7, 1.0, 1.3, 1.6, 2.0])
-    result_array = AIS_cal_neck(nij_array, ais_level=3, prob_thresholds=[0.05, 0.1, 0.2, 0.3, 0.4])
-    print(f"数组测试: Nij={nij_array} -> AIS={result_array}")
+    # # 测试颈部 AIS 计算 (使用 P(AIS>=3) 曲线)
+    # # 根据图中交点: Nij ≈ 0.15 -> P=0.05, 0.70 -> P=0.1, 1.15 -> P=0.2, 1.45 -> P=0.3, 1.68 -> P=0.4
+    # print("\n--- 颈部 AIS 计算测试 (ais_level=3) ---")
+    # test_nij_values = [0.1, 0.5, 0.7, 1.0, 1.3, 1.6, 2.0]
+    # expected_neck_ais = [0, 1, 2, 3, 4, 5, 5]
+    # for nij, expected in zip(test_nij_values, expected_neck_ais):
+    #     result = AIS_cal_neck(nij, ais_level=3)
+    #     status = "✓" if result == expected else "✗"
+    #     print(f"Nij={nij}: AIS={result} (期望={expected}) {status}")
+    # nij_array = np.array([0.1, 0.5, 0.7, 1.0, 1.3, 1.6, 2.0])
+    # result_array = AIS_cal_neck(nij_array, ais_level=3)
+    # print(f"数组测试: Nij={nij_array} -> AIS={result_array}")
     
-    print("\n" + "=" * 50)
-    print("绘制风险曲线")
-    print("=" * 50)
+    # print("\n" + "=" * 50)
+    # print("绘制风险曲线")
+    # print("=" * 50)
 
     # 绘制头部 P(AIS>=3) 曲线
     plot_ais_risk_curve('head', ais_level=3, prob_thresholds=[0.02, 0.05, 0.15, 0.4, 0.75]) # 3 [0.02, 0.05, 0.15, 0.4, 0.75], 分别以这些概率为阈值，找出对应的 HIC15 值，作为AIS分级阈值，0~0.02: AIS0, 0.02~0.05: AIS=1, 0.05~0.15: AIS=2, 0.15~0.4: AIS=3, 0.4~0.75: AIS=4, 0.75~1.0: AIS=5
     
     # 绘制胸部 P(AIS>=3) 曲线
-    plot_ais_risk_curve('chest', ais_level=3, prob_thresholds=[0.05, 0.1, 0.2, 0.3, 0.4]) # 3 [0.05, 0.1, 0.2, 0.3, 0.4], 分别以这些概率为阈值，找出对应的 Dmax 值，作为AIS分级阈值，0~0.05: AIS0, 0.05~0.1: AIS=1, 0.1~0.2: AIS=2, 0.2~0.3: AIS=3, 0.3~0.4: AIS=4, 0.4~1.0: AIS=5
+    plot_ais_risk_curve('chest', ais_level=3, prob_thresholds=[0.06, 0.1, 0.2, 0.3, 0.4]) # 3 [0.06, 0.1, 0.2, 0.3, 0.4], 分别以这些概率为阈值，找出对应的 Dmax 值，作为AIS分级阈值，0~0.06: AIS0, 0.06~0.1: AIS=1, 0.1~0.2: AIS=2, 0.2~0.3: AIS=3, 0.3~0.4: AIS=4, 0.4~1.0: AIS=5
     
     # 绘制颈部 P(AIS>=3) 曲线
-    plot_ais_risk_curve('neck', ais_level=3, prob_thresholds=[0.05, 0.1, 0.2, 0.3, 0.4])  # 3 [0.05, 0.1, 0.2, 0.3, 0.4], 分别以这些概率为阈值，找出对应的 Nij 值，作为AIS分级阈值，0~0.05: AIS0, 0.05~0.1: AIS=1, 0.1~0.2: AIS=2, 0.2~0.3: AIS=3, 0.3~0.4: AIS=4, 0.4~1.0: AIS=5
+    plot_ais_risk_curve('neck', ais_level=3, prob_thresholds=[0.06, 0.1, 0.2, 0.3, 0.4])  # 3 [0.06, 0.1, 0.2, 0.3, 0.4], 分别以这些概率为阈值，找出对应的 Nij 值，作为AIS分级阈值，0~0.06: AIS0, 0.06~0.1: AIS=1, 0.1~0.2: AIS=2, 0.2~0.3: AIS=3, 0.3~0.4: AIS=4, 0.4~1.0: AIS=5
 

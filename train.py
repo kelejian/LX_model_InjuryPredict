@@ -176,8 +176,8 @@ if __name__ == "__main__":
     if Patience > Epochs: Patience = Epochs
 
     # 加载数据集对象
-    train_dataset = torch.load("./data/train_dataset.pt")
-    val_dataset = torch.load("./data/val_dataset.pt")
+    train_dataset = torch.load("./data/train_dataset.pt", weights_only=False)
+    val_dataset = torch.load("./data/val_dataset.pt", weights_only=False)
     train_loader = DataLoader(train_dataset, batch_size=Batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=Batch_size, shuffle=False, num_workers=0)
 

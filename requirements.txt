@@ -5,3 +5,6 @@ imbalanced-learn
 pandas
 matplotlib
 tensorboard
+joblib
+torchinfo
+tqdm
