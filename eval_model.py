@@ -217,8 +217,8 @@ if __name__ == "__main__":
 
     # 分类指标 
     cls_metrics_head = get_classification_metrics(ground_truths['ais_head'], AIS_cal_head(pred_hic),  list(range(6)))
-    cls_metrics_chest = get_classification_metrics(ground_truths['ais_chest'], AIS_cal_chest(pred_dmax), [0, 2, 3, 4, 5])
-    cls_metrics_neck = get_classification_metrics(ground_truths['ais_neck'], AIS_cal_neck(pred_nij), [0, 2, 3, 4, 5])
+    cls_metrics_chest = get_classification_metrics(ground_truths['ais_chest'], AIS_cal_chest(pred_dmax), [0, 1, 2, 3, 4, 5])
+    cls_metrics_neck = get_classification_metrics(ground_truths['ais_neck'], AIS_cal_neck(pred_nij), [0, 1, 2, 3, 4, 5])
 
     # MAIS 指标
     mais_pred = np.maximum.reduce([AIS_cal_head(pred_hic), AIS_cal_chest(pred_dmax), AIS_cal_neck(pred_nij)])

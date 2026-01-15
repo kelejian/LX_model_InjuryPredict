@@ -278,8 +278,8 @@ def evaluate_and_plot_for_metric(model, model_path, val_loader_k, device, fold, 
     
     # 计算分类指标
     cls_metrics_head = get_classification_metrics(ground_truths['ais_head'], ais_head_pred, list(range(6)))
-    cls_metrics_chest = get_classification_metrics(ground_truths['ais_chest'], ais_chest_pred, [0, 2, 3, 4, 5])
-    cls_metrics_neck = get_classification_metrics(ground_truths['ais_neck'], ais_neck_pred, [0, 2, 3, 4, 5])
+    cls_metrics_chest = get_classification_metrics(ground_truths['ais_chest'], ais_chest_pred, [0, 1, 2, 3, 4, 5])
+    cls_metrics_neck = get_classification_metrics(ground_truths['ais_neck'], ais_neck_pred, [0, 1, 2, 3, 4, 5])
     cls_metrics_mais = get_classification_metrics(ground_truths['mais'], mais_pred, [0, 1, 2, 3, 4, 5])
     
     # 计算回归指标
@@ -309,10 +309,10 @@ def evaluate_and_plot_for_metric(model, model_path, val_loader_k, device, fold, 
     plot_confusion_matrix(cls_metrics_head['conf_matrix'], list(range(6)), 
                           f'Fold {fold+1} (Best {metric_name}) - CM Head', 
                           os.path.join(metric_plot_dir, "cm_head.png"))
-    plot_confusion_matrix(cls_metrics_chest['conf_matrix'], [0, 2, 3, 4, 5], 
+    plot_confusion_matrix(cls_metrics_chest['conf_matrix'], [0, 1, 2, 3, 4, 5], 
                           f'Fold {fold+1} (Best {metric_name}) - CM Chest', 
                           os.path.join(metric_plot_dir, "cm_chest.png"))
-    plot_confusion_matrix(cls_metrics_neck['conf_matrix'], [0, 2, 3, 4, 5], 
+    plot_confusion_matrix(cls_metrics_neck['conf_matrix'], [0, 1, 2, 3, 4, 5], 
                           f'Fold {fold+1} (Best {metric_name}) - CM Neck', 
                           os.path.join(metric_plot_dir, "cm_neck.png"))
     

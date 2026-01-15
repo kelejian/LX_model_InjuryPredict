@@ -181,8 +181,8 @@ def plot_categorical_distributions(combined_df, columns, output_dir):
     # 定义每个特征的完整类别，以确保X轴完整性
     category_orders = {
         'AIS_head': [0, 1, 2, 3, 4, 5],
-        'AIS_chest': [0, 2, 3, 4, 5],
-        'AIS_neck': [0, 2, 3, 4, 5],
+        'AIS_chest': [0, 1, 2, 3, 4, 5],
+        'AIS_neck': [0, 1, 2, 3, 4, 5],
         'MAIS': [0, 1, 2, 3, 4, 5]
     }
 
