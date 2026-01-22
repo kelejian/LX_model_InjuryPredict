@@ -52,13 +52,18 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
     all_preds, all_trues = [], []
     all_true_ais_head, all_true_ais_chest, all_true_ais_neck = [], [], []
     all_true_mais = []
+    all_ot = []
     
     # 根据模式选择是否启用梯度计算
     with torch.set_grad_enabled(is_train):
         for batch in loader:
             (batch_x_acc, batch_x_att_continuous, batch_x_att_discrete,
              batch_y_HIC, batch_y_Dmax, batch_y_Nij,
-             batch_ais_head, batch_ais_chest, batch_ais_neck, batch_y_MAIS) = [d.to(device) for d in batch]
+             batch_ais_head, batch_ais_chest, batch_ais_neck, batch_y_MAIS,
+             batch_OT) = [d.to(device) for d in batch]
+            
+            if is_train:
+                optimizer.zero_grad()
 
             batch_y_true = torch.stack([batch_y_HIC, batch_y_Dmax, batch_y_Nij], dim=1)
 
@@ -66,11 +71,10 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
             batch_pred, _, _ = model(batch_x_acc, batch_x_att_continuous, batch_x_att_discrete)
 
             # 计算损失
-            loss = criterion(batch_pred, batch_y_true)
+            loss = criterion(batch_pred, batch_y_true, batch_OT)
 
             # 如果是训练模式，则执行反向传播和优化
             if is_train:
-                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
@@ -82,14 +86,16 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
             all_true_ais_chest.append(batch_ais_chest.cpu().numpy())
             all_true_ais_neck.append(batch_ais_neck.cpu().numpy())
             all_true_mais.append(batch_y_MAIS.cpu().numpy())
+            all_ot.append(batch_OT.cpu().numpy())
 
     # --- 指标计算部分 ---
     avg_loss = np.mean(loss_batch)
+    ot = np.concatenate(all_ot)
     preds, trues = np.concatenate(all_preds), np.concatenate(all_trues)
     pred_hic, pred_dmax, pred_nij = preds[:, 0], preds[:, 1], preds[:, 2]
     true_hic, true_dmax, true_nij = trues[:, 0], trues[:, 1], trues[:, 2]
     
-    ais_head_pred, ais_chest_pred, ais_neck_pred = AIS_cal_head(pred_hic), AIS_cal_chest(pred_dmax), AIS_cal_neck(pred_nij)
+    ais_head_pred, ais_chest_pred, ais_neck_pred = AIS_cal_head(pred_hic), AIS_cal_chest(pred_dmax, ot), AIS_cal_neck(pred_nij)
     true_ais_head, true_ais_chest, true_ais_neck = np.concatenate(all_true_ais_head), np.concatenate(all_true_ais_chest), np.concatenate(all_true_ais_neck)
     true_mais = np.concatenate(all_true_mais)
     mais_pred = np.maximum.reduce([ais_head_pred, ais_chest_pred, ais_neck_pred])

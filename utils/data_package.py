@@ -160,7 +160,7 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 
 if __name__ == '__main__':
     pulse_dir = r'G:\VCS_acc_data\acc_data_before1111_6134'
-    params_path = r'E:\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0114_V2.csv'
+    params_path = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0121.csv'
     output_dir = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\LX-model-InjuryPredict\data'
     # 读取distribution文件
     if params_path.endswith('.npz'):
@@ -181,11 +181,12 @@ if __name__ == '__main__':
     case_ids_need = filtered_df['case_id'].astype(int).tolist()
     hic15_labels = filtered_df['HIC15'].astype(float).values
     dmax_labels = filtered_df['Dmax'].astype(float).values
+    ot = filtered_df['OT'].astype(int).values
     nij_labels = filtered_df['Nij'].astype(float).values
 
     # 计算对应的AIS标签
     ais_head_labels = AIS_cal_head(hic15_labels)
-    ais_chest_labels = AIS_cal_chest(dmax_labels)
+    ais_chest_labels = AIS_cal_chest(dmax_labels, ot)
     ais_neck_labels = AIS_cal_neck(nij_labels)
 
     # 计算MAIS
@@ -193,67 +194,87 @@ if __name__ == '__main__':
 
     ############################################################################################
     
-    # 统计三种损伤值的AIS标签分布
+    # 统计头部AIS标签分布
     unique, counts = np.unique(ais_head_labels, return_counts=True)
     label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
     print(f"AIS头部标签分布: {label_distribution}")
 
-    unique, counts = np.unique(ais_chest_labels, return_counts=True)
-    label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
-    print(f"AIS胸部标签分布: {label_distribution}")
+    # 按OT分别统计胸部AIS标签分布
+    ot_names = {1: '5th Female', 2: '50th Male', 3: '95th Male'}
+    for ot_val in [1, 2, 3]:
+        ot_mask = (ot == ot_val)
+        ais_chest_ot = ais_chest_labels[ot_mask]
+        unique, counts = np.unique(ais_chest_ot, return_counts=True)
+        label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
+        print(f"AIS胸部标签分布 (OT={ot_val}, {ot_names[ot_val]}): {label_distribution}")
 
+    # 统计颈部AIS标签分布
     unique, counts = np.unique(ais_neck_labels, return_counts=True)
     label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
     print(f"AIS颈部标签分布: {label_distribution}")
 
+    # 按OT分别统计MAIS分布
+    for ot_val in [1, 2, 3]:
+        ot_mask = (ot == ot_val)
+        mais_ot = mais_labels[ot_mask]
+        unique, counts = np.unique(mais_ot, return_counts=True)
+        label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
+        print(f"MAIS标签分布 (OT={ot_val}, {ot_names[ot_val]}): {label_distribution}")
+    # 合并所有OT的MAIS分布
     unique, counts = np.unique(mais_labels, return_counts=True)
     label_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
-    print(f"MAIS标签分布: {label_distribution}")
+    print(f"MAIS标签分布 (所有OT合并): {label_distribution}")
+
     ############################################################################################
     # 绘制碰撞速度和HIC/Dmax/Nij的散点图
     import matplotlib.pyplot as plt
-    import matplotlib.colors as mcolors
+    from matplotlib.patches import Patch
 
-    # 设定是哪个部位的损伤
-    for inj_loc in ['head', 'chest', 'neck']:
-        if inj_loc == 'head':
-            inj_labels = hic15_labels
-            ais_labels = ais_head_labels
-        elif inj_loc == 'chest':
-            inj_labels = dmax_labels
-            ais_labels = ais_chest_labels
-        elif inj_loc == 'neck':
-            inj_labels = nij_labels
-            ais_labels = ais_neck_labels
-        else:
-            raise ValueError("inj_loc 必须是 'head', 'chest' 或 'neck'")
+    # 确保数据顺序一一对应 - 按case_ids_need的顺序提取碰撞速度
+    impact_velocities = distribution_df.loc[case_ids_need, 'impact_velocity'].values
+    colors = ['blue', 'green', 'yellow', 'orange', 'red', 'darkred']
 
-        # 确保数据顺序一一对应 - 按case_ids_need的顺序提取碰撞速度
-        impact_velocities = distribution_df.loc[case_ids_need, 'impact_velocity'].values
-        
-        # 不同AIS等级使用不同颜色
+    # 头部散点图
+    plt.figure(figsize=(8,6))
+    ais_colors = [colors[min(ais, 5)] for ais in ais_head_labels]
+    plt.scatter(impact_velocities, hic15_labels, c=ais_colors, alpha=0.6, s=50)
+    legend_elements = [Patch(facecolor=colors[i], label=f'AIS {i}') for i in range(6) if i in ais_head_labels]
+    plt.legend(handles=legend_elements, title='AIS LEVEL', loc='upper left')
+    plt.title('impact velocity vs HIC15')
+    plt.xlabel('impact velocity (km/h)')
+    plt.ylabel('HIC15')
+    plt.grid(True, alpha=0.3)
+
+    # 胸部散点图 - 按OT分别绘制三张
+    for ot_val in [1, 2, 3]:
+        ot_mask = (ot == ot_val)
         plt.figure(figsize=(8,6))
-        colors = ['blue', 'green', 'yellow', 'orange', 'red', 'darkred']
-        ais_colors = [colors[min(ais, 5)] for ais in ais_labels]
         
-        # 创建散点图
-        scatter = plt.scatter(impact_velocities, inj_labels, c=ais_colors, alpha=0.6, s=50)
-
-        # 添加图例
-        from matplotlib.patches import Patch
-        legend_elements = [Patch(facecolor=colors[i], label=f'AIS {i}') for i in range(6) if i in ais_labels]
+        dmax_ot = dmax_labels[ot_mask]
+        ais_chest_ot = ais_chest_labels[ot_mask]
+        velocity_ot = impact_velocities[ot_mask]
+        
+        ais_colors = [colors[min(ais, 5)] for ais in ais_chest_ot]
+        plt.scatter(velocity_ot, dmax_ot, c=ais_colors, alpha=0.6, s=50)
+        
+        legend_elements = [Patch(facecolor=colors[i], label=f'AIS {i}') for i in range(6) if i in ais_chest_ot]
         plt.legend(handles=legend_elements, title='AIS LEVEL', loc='upper left')
-
-        if inj_loc == 'head':
-            title = 'impact velocity vs HIC15'
-        elif inj_loc == 'chest':
-            title = 'impact velocity vs Dmax'
-        elif inj_loc == 'neck':
-            title = 'impact velocity vs Nij'
-        plt.title(title)
+        plt.title(f'impact velocity vs Dmax (OT={ot_val}, {ot_names[ot_val]})')
         plt.xlabel('impact velocity (km/h)')
-        plt.ylabel('Injury Severity Metric')
+        plt.ylabel('Dmax (mm)')
         plt.grid(True, alpha=0.3)
+
+    # 颈部散点图
+    plt.figure(figsize=(8,6))
+    ais_colors = [colors[min(ais, 5)] for ais in ais_neck_labels]
+    plt.scatter(impact_velocities, nij_labels, c=ais_colors, alpha=0.6, s=50)
+    legend_elements = [Patch(facecolor=colors[i], label=f'AIS {i}') for i in range(6) if i in ais_neck_labels]
+    plt.legend(handles=legend_elements, title='AIS LEVEL', loc='upper left')
+    plt.title('impact velocity vs Nij')
+    plt.xlabel('impact velocity (km/h)')
+    plt.ylabel('Nij')
+    plt.grid(True, alpha=0.3)
+
     plt.show()
     ############################################################################################
 

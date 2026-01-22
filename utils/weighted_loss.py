@@ -98,9 +98,15 @@ class weighted_loss(nn.Module):
         self.params_chest = {'a': 10.0, 'b': 75, 'c': 85, 'd': 100, 't': -0.5}
         self.params_neck = {'a': 0.15, 'b': 1.5, 'c': 1.7, 'd': 1.9, 't': -0.5}
  
-    def weighted_function(self, pred, true, injury_type):
+    def weighted_function(self, pred, true, injury_type, ot=None):
         """
         样本权重函数。根据AIS分类准确率和损伤值区间范围计算不同样本的权重。
+        
+        Args:
+            pred: 预测值张量
+            true: 真实值张量
+            injury_type: 损伤类型 ('head', 'chest', 'neck')
+            ot: 乘员体型类别 (仅chest需要)
         """
         # --- 将PyTorch张量转换为Numpy数组以调用外部函数 ---
         # .detach()确保此操作脱离计算图, .cpu()移至CPU, .numpy()转换为Numpy数组
@@ -114,8 +120,11 @@ class weighted_loss(nn.Module):
             # 使用通用分段函数计算样本区间权重
             weights_mid = 1.0 + Piecewise_linear(true, pred, self.params_head, self.weight_factor_sample)
         elif injury_type == 'chest':
-            pred_ais_np = AIS_cal_chest(pred_np)
-            true_ais_np = AIS_cal_chest(true_np)
+            if ot is None:
+                raise ValueError("计算胸部AIS时需要提供ot参数")
+            ot_np = ot.detach().cpu().numpy() if hasattr(ot, 'detach') else ot
+            pred_ais_np = AIS_cal_chest(pred_np, ot_np)
+            true_ais_np = AIS_cal_chest(true_np, ot_np)
             weights_mid = 1.0 + Piecewise_linear(true, pred, self.params_chest, self.weight_factor_sample)
         elif injury_type == 'neck':
             pred_ais_np = AIS_cal_neck(pred_np)
@@ -135,17 +144,18 @@ class weighted_loss(nn.Module):
         # 最终权重是分类权重和样本区间权重的乘积
         return weights_classify * weights_mid
 
-    def forward(self, pred, true):
+    def forward(self, pred, true, ot=None):
         """
         计算加权多任务损失。
         Args:
             pred (torch.Tensor): 模型的预测输出, 形状为 (B, 3)。列顺序: HIC, Dmax, Nij。
             true (torch.Tensor): 真实标签, 形状为 (B, 3)。列顺序: HIC, Dmax, Nij。
+            ot (torch.Tensor): 乘员体征类别，形状为(B,)，仅用于胸部损伤的权重计算。
         Returns:
             total_loss (torch.Tensor): 加权总损失。为标量张量。
         """
         # --- 分离不同损伤的预测和标签 ---
-        pred_hic, pred_dmax, pred_nij = pred[:, 0], pred[:, 1], pred[:, 2]
+        pred_hic, pred_dmax, pred_nij = pred[:, 0], pred[:, 1], pred[:, 2] # 形状均为 (B,)
         true_hic, true_dmax, true_nij = true[:, 0], true[:, 1], true[:, 2]
 
         # --- 分别计算每个任务的加权损失 ---
@@ -154,7 +164,11 @@ class weighted_loss(nn.Module):
         loss_hic = (self.loss_funcs[0](pred_hic, true_hic) * weights_hic).mean()
 
         # Dmax Loss (使用 self.loss_funcs[1])
-        weights_dmax = self.weighted_function(pred_dmax, true_dmax, 'chest')
+        if ot is None:
+            ot = 2 + torch.zeros_like(true_dmax, dtype=torch.int32)  # 如果未提供ot，则使用默认值2
+            # 警告
+            print("***Warning: 'ot' parameter is None. Using default OT=2 for all samples in Dmax loss calculation.\n")
+        weights_dmax = self.weighted_function(pred_dmax, true_dmax, 'chest', ot)
         loss_dmax = (self.loss_funcs[1](pred_dmax, true_dmax) * weights_dmax).mean()
 
         # Nij Loss (使用 self.loss_funcs[2])
@@ -181,6 +195,8 @@ if __name__ == '__main__':
         [10.0, 2.0, 0.1]        # 真实3
     ], dtype=torch.float32)
 
+    ot = torch.tensor([2, 3, 1], dtype=torch.int32)  # 乘员体征类别
+
     # 初始化损失函数，可以指定各部分损失的权重
     criterion = weighted_loss(
         base_loss='mae', 
@@ -189,10 +205,10 @@ if __name__ == '__main__':
         loss_weights=(1.0, 0.8, 1.2) # 示例权重：HIC权重1.0, Dmax权重0.8, Nij权重1.2
     )
     
-    loss = criterion(pred, true)
-    print("Total Weighted MAE Loss:", loss.item())
+    loss = criterion(pred, true, ot)
+    print("\nTotal Weighted MAE Loss:", loss.item())
 
     # 对比基础的MAE Loss
     criterion_base = nn.L1Loss()
     loss_base = criterion_base(pred, true)
-    print("Base MAE Loss:", loss_base.item())
+    print("Base MAE Loss:", loss_base.item(), '\n')

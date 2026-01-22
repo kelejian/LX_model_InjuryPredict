@@ -74,19 +74,23 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
     all_preds, all_trues = [], []
     all_true_ais_head, all_true_ais_chest, all_true_ais_neck = [], [], []
     all_true_mais = []
+    all_ot = []
     
     with torch.set_grad_enabled(is_train):
         for batch in loader:
             (batch_x_acc, batch_x_att_continuous, batch_x_att_discrete,
              batch_y_HIC, batch_y_Dmax, batch_y_Nij,
-             batch_ais_head, batch_ais_chest, batch_ais_neck, batch_y_MAIS) = [d.to(device) for d in batch]
-
-            batch_y_true = torch.stack([batch_y_HIC, batch_y_Dmax, batch_y_Nij], dim=1)
-            batch_pred, _, _ = model(batch_x_acc, batch_x_att_continuous, batch_x_att_discrete)
-            loss = criterion(batch_pred, batch_y_true)
+             batch_ais_head, batch_ais_chest, batch_ais_neck, batch_y_MAIS, 
+             batch_OT) = [d.to(device) for d in batch]
 
             if is_train:
                 optimizer.zero_grad()
+
+            batch_y_true = torch.stack([batch_y_HIC, batch_y_Dmax, batch_y_Nij], dim=1)
+            batch_pred, _, _ = model(batch_x_acc, batch_x_att_continuous, batch_x_att_discrete)
+            loss = criterion(batch_pred, batch_y_true, batch_OT)
+
+            if is_train:
                 loss.backward()
                 optimizer.step()
 
@@ -97,13 +101,15 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
             all_true_ais_chest.append(batch_ais_chest.cpu().numpy())
             all_true_ais_neck.append(batch_ais_neck.cpu().numpy())
             all_true_mais.append(batch_y_MAIS.cpu().numpy())
+            all_ot.append(batch_OT.cpu().numpy())
 
     avg_loss = np.mean(loss_batch)
     preds, trues = np.concatenate(all_preds), np.concatenate(all_trues)
+    ot = np.concatenate(all_ot)
     pred_hic, pred_dmax, pred_nij = preds[:, 0], preds[:, 1], preds[:, 2]
     true_hic, true_dmax, true_nij = trues[:, 0], trues[:, 1], trues[:, 2]
     
-    ais_head_pred, ais_chest_pred, ais_neck_pred = AIS_cal_head(pred_hic), AIS_cal_chest(pred_dmax), AIS_cal_neck(pred_nij)
+    ais_head_pred, ais_chest_pred, ais_neck_pred = AIS_cal_head(pred_hic), AIS_cal_chest(pred_dmax, ot), AIS_cal_neck(pred_nij)
     true_ais_head, true_ais_chest, true_ais_neck = np.concatenate(all_true_ais_head), np.concatenate(all_true_ais_chest), np.concatenate(all_true_ais_neck)
     true_mais = np.concatenate(all_true_mais)
     mais_pred = np.maximum.reduce([ais_head_pred, ais_chest_pred, ais_neck_pred])
@@ -126,7 +132,6 @@ def run_one_epoch(model, loader, criterion, device, optimizer=None):
 def evaluate_fold(model, loader, device):
     """
     在验证集上运行模型并收集所有预测和真实标签。
-    (此函数基于 eval_model.py 中的 test 函数)
 
     返回:
         preds (np.ndarray): 模型对 [HIC, Dmax, Nij] 的预测值, 形状 (N, 3)。
@@ -136,12 +141,14 @@ def evaluate_fold(model, loader, device):
     all_preds = []
     all_trues_regression = []
     all_true_ais_head, all_true_ais_chest, all_true_ais_neck, all_true_mais = [], [], [], []
+    all_ot = []
 
     with torch.no_grad():
         for batch in loader:
             (batch_x_acc, batch_x_att_continuous, batch_x_att_discrete,
              batch_y_HIC, batch_y_Dmax, batch_y_Nij,
-             batch_ais_head, batch_ais_chest, batch_ais_neck, batch_y_MAIS) = [d.to(device) for d in batch]
+             batch_ais_head, batch_ais_chest, batch_ais_neck, batch_y_MAIS, 
+             batch_OT) = [d.to(device) for d in batch]
             
             # 前向传播
             batch_pred, _, _ = model(batch_x_acc, batch_x_att_continuous, batch_x_att_discrete)
@@ -154,14 +161,16 @@ def evaluate_fold(model, loader, device):
             all_true_ais_chest.append(batch_ais_chest.cpu().numpy())
             all_true_ais_neck.append(batch_ais_neck.cpu().numpy())
             all_true_mais.append(batch_y_MAIS.cpu().numpy())
-    
+            all_ot.append(batch_OT.cpu().numpy())
+
     preds = np.concatenate(all_preds)
     trues = {
         'regression': np.concatenate(all_trues_regression),
         'ais_head': np.concatenate(all_true_ais_head),
         'ais_chest': np.concatenate(all_true_ais_chest),
         'ais_neck': np.concatenate(all_true_ais_neck),
-        'mais': np.concatenate(all_true_mais)
+        'mais': np.concatenate(all_true_mais),
+        'ot': np.concatenate(all_ot)
     }
     
     return preds, trues
@@ -266,21 +275,22 @@ def evaluate_and_plot_for_metric(model, model_path, val_loader_k, device, fold, 
     
     # 执行评估
     predictions, ground_truths = evaluate_fold(model, val_loader_k, device)
-    
+
+    ot = ground_truths['ot']
     pred_hic, pred_dmax, pred_nij = predictions[:, 0], predictions[:, 1], predictions[:, 2]
     true_hic, true_dmax, true_nij = ground_truths['regression'][:, 0], ground_truths['regression'][:, 1], ground_truths['regression'][:, 2]
     
     # 计算 AIS 预测
     ais_head_pred = AIS_cal_head(pred_hic)
-    ais_chest_pred = AIS_cal_chest(pred_dmax)
+    ais_chest_pred = AIS_cal_chest(pred_dmax, ot)
     ais_neck_pred = AIS_cal_neck(pred_nij)
     mais_pred = np.maximum.reduce([ais_head_pred, ais_chest_pred, ais_neck_pred])
     
     # 计算分类指标
     cls_metrics_head = get_classification_metrics(ground_truths['ais_head'], ais_head_pred, list(range(6)))
-    cls_metrics_chest = get_classification_metrics(ground_truths['ais_chest'], ais_chest_pred, [0, 1, 2, 3, 4, 5])
-    cls_metrics_neck = get_classification_metrics(ground_truths['ais_neck'], ais_neck_pred, [0, 1, 2, 3, 4, 5])
-    cls_metrics_mais = get_classification_metrics(ground_truths['mais'], mais_pred, [0, 1, 2, 3, 4, 5])
+    cls_metrics_chest = get_classification_metrics(ground_truths['ais_chest'], ais_chest_pred, list(range(6)))
+    cls_metrics_neck = get_classification_metrics(ground_truths['ais_neck'], ais_neck_pred, list(range(6)))
+    cls_metrics_mais = get_classification_metrics(ground_truths['mais'], mais_pred, list(range(6)))
     
     # 计算回归指标
     reg_metrics_hic = get_regression_metrics(true_hic, pred_hic)
@@ -303,16 +313,16 @@ def evaluate_and_plot_for_metric(model, model_path, val_loader_k, device, fold, 
                  os.path.join(metric_plot_dir, "scatter_Nij.png"))
     
     # 绘制混淆矩阵
-    plot_confusion_matrix(cls_metrics_mais['conf_matrix'], [0, 1, 2, 3, 4, 5], 
+    plot_confusion_matrix(cls_metrics_mais['conf_matrix'], list(range(6)), 
                           f'Fold {fold+1} (Best {metric_name}) - CM MAIS', 
                           os.path.join(metric_plot_dir, "cm_mais.png"))
     plot_confusion_matrix(cls_metrics_head['conf_matrix'], list(range(6)), 
                           f'Fold {fold+1} (Best {metric_name}) - CM Head', 
                           os.path.join(metric_plot_dir, "cm_head.png"))
-    plot_confusion_matrix(cls_metrics_chest['conf_matrix'], [0, 1, 2, 3, 4, 5], 
+    plot_confusion_matrix(cls_metrics_chest['conf_matrix'], list(range(6)), 
                           f'Fold {fold+1} (Best {metric_name}) - CM Chest', 
                           os.path.join(metric_plot_dir, "cm_chest.png"))
-    plot_confusion_matrix(cls_metrics_neck['conf_matrix'], [0, 1, 2, 3, 4, 5], 
+    plot_confusion_matrix(cls_metrics_neck['conf_matrix'], list(range(6)), 
                           f'Fold {fold+1} (Best {metric_name}) - CM Neck', 
                           os.path.join(metric_plot_dir, "cm_neck.png"))
     

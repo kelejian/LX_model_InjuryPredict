@@ -45,21 +45,23 @@ class CrashDataset(Dataset):
             self.case_ids = inp_ids
 
             # --- 加载原始数据 ---
-            self.x_acc_raw = inputs['waveforms'] # 形状 (N, 2, 150) x/y direction acceleration waveforms
+            self.x_acc_raw = inputs['waveforms'].astype(float) # 形状 (N, 2, 150) x/y direction acceleration waveforms
             self.x_att_raw = inputs['params'] # 形状 (N, 12)  attributes
 
             # 特征数据 (x_att_raw) 说明：形状 (N, 12)
             # 连续特征 (0-9): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, RA
             # 离散特征 (10-11): is_driver_side, OT
 
+            self.OT_raw = inputs['params'][:, 11].astype(int)  # OT 特征，形状 (N,)
+
             # --- 加载所有目标变量 ---
-            self.y_HIC = labels['HIC']
-            self.y_Dmax = labels['Dmax']
-            self.y_Nij = labels['Nij']
-            self.ais_head = labels['AIS_head']
-            self.ais_chest = labels['AIS_chest']
-            self.ais_neck = labels['AIS_neck']
-            self.mais = labels['MAIS']
+            self.y_HIC = labels['HIC'].astype(float)
+            self.y_Dmax = labels['Dmax'].astype(float)
+            self.y_Nij = labels['Nij'].astype(float)
+            self.ais_head = labels['AIS_head'].astype(int)
+            self.ais_chest = labels['AIS_chest'].astype(int)
+            self.ais_neck = labels['AIS_neck'].astype(int)
+            self.mais = labels['MAIS'].astype(int)
         
         self.x_acc = None
         self.x_att_continuous = None
@@ -88,7 +90,8 @@ class CrashDataset(Dataset):
             torch.tensor(self.ais_head[idx], dtype=torch.int),
             torch.tensor(self.ais_chest[idx], dtype=torch.int),
             torch.tensor(self.ais_neck[idx], dtype=torch.int),
-            torch.tensor(self.mais[idx], dtype=torch.int)
+            torch.tensor(self.mais[idx], dtype=torch.int),
+            torch.tensor(self.OT_raw[idx], dtype=torch.int) # 额外返回 OT 特征
         )
 
 class DataProcessor:
@@ -137,8 +140,8 @@ class DataProcessor:
         if self.waveform_norm_factor < 1e-6: self.waveform_norm_factor = 1.0
 
         # --- 拟合标量特征的Scaler和Encoder ---
-        train_x_att_continuous_raw = dataset.x_att_raw[train_indices][:, self.continuous_indices]
-        train_x_att_discrete_raw = dataset.x_att_raw[train_indices][:, self.discrete_indices]
+        train_x_att_continuous_raw = dataset.x_att_raw[train_indices][:, self.continuous_indices].astype(float)
+        train_x_att_discrete_raw = dataset.x_att_raw[train_indices][:, self.discrete_indices].astype(int)
 
         self.scaler_minmax = MinMaxScaler(feature_range=(0, 1))
         self.scaler_maxabs = MaxAbsScaler()
@@ -448,11 +451,14 @@ if __name__ == '__main__':
             for i, batch in enumerate(train_loader):
                 (x_acc, x_att_continuous, x_att_discrete, 
                  y_HIC, y_Dmax, y_Nij, 
-                 ais_head, ais_chest, ais_neck, mais) = batch
+                 ais_head, ais_chest, ais_neck, mais, ot) = batch
                 
                 print("x_acc shape:", x_acc.shape)
                 print("y_HIC shape:", y_HIC.shape)
                 print("MAIS shape:", mais.shape)
+                print("OT shape:", ot.shape)
+                # ot的值范围
+                print("OT values in batch:", ot.unique().tolist())
                 break
             print(f"batch loading time: {time.time() - batch_start_time:.4f}s")
         except Exception as e:

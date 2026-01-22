@@ -37,7 +37,7 @@ RUN_DIR = "./runs/InjuryPredictModel_10261509"  # 示例: "./runs/InjuryPredictM
 WEIGHT_FILE = "final_model.pth"
 
 # 1.3) 包含原始18个标量特征的 distribution 文件路径
-DISTRIBUTION_FILE = r"E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_1026.csv" 
+DISTRIBUTION_FILE = r"E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0121.csv" 
 
 # 1.4) 存放 .pt 数据集的目录
 DATA_DIR = "./data"
@@ -46,7 +46,7 @@ DATA_DIR = "./data"
 
 
 def load_original_features(dist_file_path):
-    """从 distribution 文件加载原始的18个标量特征"""
+    """从 distribution 文件加载原始的标量特征"""
     print(f"正在从 {dist_file_path} 加载原始标量特征...")
     if dist_file_path.endswith('.csv'):
         dist_df = pd.read_csv(dist_file_path)
@@ -55,12 +55,13 @@ def load_original_features(dist_file_path):
         dist_npz = np.load(dist_file_path, allow_pickle=True)
         dist_df = pd.DataFrame({key: dist_npz[key] for key in dist_npz.files})
 
-    # 定义18个标量特征的列名 (与 data_package.py 中一致)
+    # 定义12个标量特征的列名
+    # 连续特征 (0-9): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, RA
+    # 离散特征 (10-11): is_driver_side, OT
     feature_columns = [
-        'case_id',
-        'impact_velocity', 'impact_angle', 'overlap', 'occupant_type',
-        'll1', 'll2', 'btf', 'pp', 'plp', 'lla_status', 'llattf',
-        'dz', 'ptf', 'aft', 'aav_status', 'ttf', 'sp', 'recline_angle'
+        'impact_velocity', 'impact_angle', 'overlap', 'LL1', 'LL2', 
+        'BTF', 'LLATTF', 'AFT', 'SP', 'RA', 
+        'is_driver_side', 'OT',
     ]
     
     # 确保所有列都存在
@@ -142,9 +143,10 @@ def run_inference(model, dataset, device):
     print("开始在完整数据集上运行模型推理...")
     with torch.no_grad():
         for batch in data_loader:
-            # 从 CrashDataset 的 __getitem__ 解包 (共10个元素)
+            # 从 CrashDataset 的 __getitem__ 解包
             (batch_x_acc, batch_x_att_continuous, batch_x_att_discrete,
-             _, _, _, _, _, _, _) = [d.to(device) for d in batch]
+             batch_y_HIC, batch_y_Dmax, batch_y_Nij,
+             batch_ais_head, batch_ais_chest, batch_ais_neck, batch_y_MAIS, batch_OT) = [d.to(device) for d in batch]
 
             batch_pred, _, _ = model(batch_x_acc, batch_x_att_continuous, batch_x_att_discrete)
             
@@ -185,7 +187,7 @@ def create_results_dataframe(dataset, predictions_np, original_features_df, case
     
     # 3. 计算预测的AIS等级 (确保返回整数类型)
     results_df['AIS_head_pred'] = AIS_cal_head(results_df['HIC_pred']).astype(int)
-    results_df['AIS_chest_pred'] = AIS_cal_chest(results_df['Dmax_pred']).astype(int)
+    results_df['AIS_chest_pred'] = AIS_cal_chest(results_df['Dmax_pred'], original_features_df['OT']).astype(int)
     results_df['AIS_neck_pred'] = AIS_cal_neck(results_df['Nij_pred']).astype(int)
     
     # 4. 计算预测的 MAIS 等级 (确保整数)
@@ -215,7 +217,7 @@ def create_results_dataframe(dataset, predictions_np, original_features_df, case
         (results_df['AIS_neck_true_raw'] == results_df['AIS_neck_pred'])
     ).astype(int)  # 1表示全对，0表示有错
 
-    # 7. 合并原始的18个标量特征
+    # 7. 合并原始的标量特征
     final_df = pd.merge(results_df, original_features_df, on='case_id', how='left')
     
     # 8. 调整列顺序以满足您的要求
@@ -223,6 +225,7 @@ def create_results_dataframe(dataset, predictions_np, original_features_df, case
     
     ordered_columns = [
         'case_id',
+        'OT',
         'dataset_type', # 新
         'all_AIS_correct',
         # MAIS (新)

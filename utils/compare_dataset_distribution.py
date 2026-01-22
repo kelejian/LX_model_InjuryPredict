@@ -69,12 +69,15 @@ def load_data_from_subsets(data_dir=DATA_DIR):
          exit()
          
     full_dataset = train_subset.dataset
-    
+    # 特征数据 (x_att_raw) 说明：形状 (N, 12)
+    # 连续特征 (0-9): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, RA
+    # 离散特征 (10-11): is_driver_side, OT   
+
     # 定义特征名称映射 (基于 CrashDataset 和 DataProcessor)
     feature_names = {
-        0: "impact_velocity", 1: "impact_angle", 2: "overlap", 3: "occupant_type", 4: "ll1",
-        5: "ll2", 6: "btf", 7: "pp", 8: "plp", 9: "lla_status", 10: "llattf", 11: "dz",
-        12: "ptf", 13: "aft", 14: "aav_status", 15: "ttf", 16: "sp", 17: "recline_angle"
+        0: "impact_velocity", 1: "impact_angle", 2: "overlap", 3: "LL1", 4: "LL2",
+        5: "BTF", 6: "LLATTF", 7: "AFT", 8: "SP", 9: "RA",
+        10: "is_driver_side", 11: "OT"
     }
 
     # -- 提取数据 --
@@ -111,7 +114,7 @@ def calculate_ais_levels(df):
     
     # 注意：这里使用 HIC 列， CrashDataset 中存储的就是 HIC
     df['AIS_head'] = AIS_cal_head(df['HIC'])
-    df['AIS_chest'] = AIS_cal_chest(df['Dmax'])
+    df['AIS_chest'] = AIS_cal_chest(df['Dmax'], df['OT'])
     df['AIS_neck'] = AIS_cal_neck(df['Nij'])
     
     df['MAIS'] = np.maximum.reduce([
