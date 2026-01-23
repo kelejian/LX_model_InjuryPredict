@@ -110,7 +110,7 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 
             # --- 4. 提取匹配的参数 ---          
             params_np = np.array([
-                # --- 连续特征 (Continuous): 共 10 个---
+                # --- 连续特征 (Continuous): 共 11 个---
                 params_row['impact_velocity'], # 碰撞速度 kph
                 params_row['impact_angle'], # 碰撞角度 °，分正负方向
                 params_row['overlap'], # 重叠率，分正负方向
@@ -120,12 +120,13 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
                 params_row['LLATTF'],  # 安全带二级限力切换时刻 ms
                 params_row['AFT'], # 气囊点火时刻 ms
                 params_row['SP'], # 座椅前后位置 mm
+                params_row['SH'], # 座椅高度 mm
                 params_row['RA'], # 座椅靠背角 °；虽离散化但作为连续特征处理
                 
                 # --- 离散特征 (Discrete): 共 2 个---
                 params_row['is_driver_side'], # 主驾侧标识 (0/1)
                 params_row['OT'] # 乘员体征 (1/2/3)
-            ], dtype=np.float32) # 形状 (12,)
+            ], dtype=np.float32) # 形状 (13,)
 
             # --- 5. 添加到结果列表 ---
             processed_case_ids.append(case_id)
@@ -142,7 +143,7 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 
     # --- 6. 将数据列表转换为Numpy数组并保存 ---
     final_case_ids = np.array(processed_case_ids, dtype=int) # 形状 (N,)
-    final_params = np.stack(processed_params, axis=0) # 形状 (N, 12)
+    final_params = np.stack(processed_params, axis=0) # 形状 (N, 13)
     final_waveforms = np.stack(processed_waveforms, axis=0) # 形状 (N, 2, 150)
     # 断言检查：输出 case_ids 顺序必须与传入的 case_id_list 一致
     assert np.array_equal(final_case_ids, np.array(case_id_list, dtype=int)), (
@@ -160,7 +161,7 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 
 if __name__ == '__main__':
     pulse_dir = r'G:\VCS_acc_data\acc_data_before1111_6134'
-    params_path = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0121.csv'
+    params_path = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0123.csv'
     output_dir = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\LX-model-InjuryPredict\data'
     # 读取distribution文件
     if params_path.endswith('.npz'):

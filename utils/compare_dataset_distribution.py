@@ -69,15 +69,14 @@ def load_data_from_subsets(data_dir=DATA_DIR):
          exit()
          
     full_dataset = train_subset.dataset
-    # 特征数据 (x_att_raw) 说明：形状 (N, 12)
-    # 连续特征 (0-9): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, RA
-    # 离散特征 (10-11): is_driver_side, OT   
-
+    # 特征数据 (x_att_raw) 说明：形状 (N, 13)
+    # 连续特征 (0-10): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, SH, RA
+    # 离散特征 (11-12): is_driver_side, OT
     # 定义特征名称映射 (基于 CrashDataset 和 DataProcessor)
     feature_names = {
         0: "impact_velocity", 1: "impact_angle", 2: "overlap", 3: "LL1", 4: "LL2",
-        5: "BTF", 6: "LLATTF", 7: "AFT", 8: "SP", 9: "RA",
-        10: "is_driver_side", 11: "OT"
+        5: "BTF", 6: "LLATTF", 7: "AFT", 8: "SP", 9: "SH", 10: "RA",
+        11: "is_driver_side", 12: "OT"
     }
 
     # -- 提取数据 --
@@ -281,13 +280,13 @@ if __name__ == "__main__":
     # 3. 定义要绘图的列
     # 连续标量 (输入特征)
     continuous_features = [
-        'impact_velocity', 'impact_angle', 'overlap', 'll1', 'll2', 
-        'btf', 'pp', 'plp', 'llattf', 'ptf', 'aft', 'ttf', 'sp', 'recline_angle'
+        'impact_velocity', 'impact_angle', 'overlap', 'LL1', 'LL2', 
+        'BTF', 'LLATTF', 'AFT', 'SP', 'SH', 'RA'
     ]
     
     # 离散标量 (输入特征)
     discrete_features = [
-        'occupant_type', 'lla_status', 'dz', 'aav_status'
+        'OT', 'is_driver_side'
     ]
     
     # 损伤标量 (标签)

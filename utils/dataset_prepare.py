@@ -46,13 +46,12 @@ class CrashDataset(Dataset):
 
             # --- 加载原始数据 ---
             self.x_acc_raw = inputs['waveforms'].astype(float) # 形状 (N, 2, 150) x/y direction acceleration waveforms
-            self.x_att_raw = inputs['params'] # 形状 (N, 12)  attributes
+            self.x_att_raw = inputs['params'] # 形状 (N, 13)  attributes
 
-            # 特征数据 (x_att_raw) 说明：形状 (N, 12)
-            # 连续特征 (0-9): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, RA
-            # 离散特征 (10-11): is_driver_side, OT
-
-            self.OT_raw = inputs['params'][:, 11].astype(int)  # OT 特征，形状 (N,)
+            # 特征数据 (x_att_raw) 说明：形状 (N, 13)
+            # 连续特征 (0-10): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, SH, RA
+            # 离散特征 (11-12): is_driver_side, OT
+            self.OT_raw = inputs['params'][:, 12].astype(int)  # OT 特征，形状 (N,)
 
             # --- 加载所有目标变量 ---
             self.y_HIC = labels['HIC'].astype(float)
@@ -67,10 +66,10 @@ class CrashDataset(Dataset):
         self.x_att_continuous = None
         self.x_att_discrete = None
 
-        # 连续特征索引: 0~9
-        self.continuous_indices = list(range(10))
-        # 离散特征索引: 10, 11 (is_driver_side, OT)
-        self.discrete_indices = [10, 11]
+        # 连续特征索引: 0~10
+        self.continuous_indices = list(range(11))
+        # 离散特征索引: 11, 12 (is_driver_side, OT)
+        self.discrete_indices = [11, 12]
         self.num_classes_of_discrete = None
 
     def __len__(self):
@@ -105,9 +104,9 @@ class DataProcessor:
         self.scaler_maxabs = None
         self.encoders_discrete = None
 
-        # 定义连续与离散特征在原始12维向量中的索引
-        self.continuous_indices = list(range(10))
-        self.discrete_indices = [10, 11]
+        # 定义连续与离散特征在原始13维向量中的索引
+        self.continuous_indices = list(range(11)) # `0-10` 连续特征
+        self.discrete_indices = [11, 12]
         
         # --- 定义预处理策略 ---
         # 连续特征子集中，应用 MaxAbsScaler 的索引 (归一化至 [-1, 1])
@@ -115,14 +114,14 @@ class DataProcessor:
         self.maxabs_indices_in_continuous = [1, 2]
         
         # 连续特征子集中，应用 MinMaxScaler 的索引 (归一化至 [0, 1])
-        # Idx 0: velocity, 3: LL1, 4: LL2, 5: BTF, 6: LLATTF, 7: AFT, 8: SP, 9: RA
-        self.minmax_indices_in_continuous = [0, 3, 4, 5, 6, 7, 8, 9]
+        # Idx 0: velocity, 3: LL1, 4: LL2, 5: BTF, 6: LLATTF, 7: AFT, 8: SP, 9: SH, 10: RA
+        self.minmax_indices_in_continuous = [0, 3, 4, 5, 6, 7, 8, 9, 10]
         
         # 更新特征名称映射
         self.feature_names = {
             0: "impact_velocity", 1: "impact_angle", 2: "overlap", 
-            3: "LL1", 4: "LL2", 5: "BTF", 6: "LLATTF", 7: "AFT", 8: "SP", 9: "RA",
-            10: "is_driver_side", 11: "OT"
+            3: "LL1", 4: "LL2", 5: "BTF", 6: "LLATTF", 7: "AFT", 8: "SP", 9: "SH", 10: "RA",
+            11: "is_driver_side", 12: "OT"
         }
 
     def fit(self, train_indices, dataset):

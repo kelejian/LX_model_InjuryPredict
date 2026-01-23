@@ -55,12 +55,12 @@ def load_original_features(dist_file_path):
         dist_npz = np.load(dist_file_path, allow_pickle=True)
         dist_df = pd.DataFrame({key: dist_npz[key] for key in dist_npz.files})
 
-    # 定义12个标量特征的列名
-    # 连续特征 (0-9): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, RA
-    # 离散特征 (10-11): is_driver_side, OT
+    # 定义13个标量特征的列名
+    # 连续特征 (0-10): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, SH, RA
+    # 离散特征 (11-12): is_driver_side, OT
     feature_columns = [
         'impact_velocity', 'impact_angle', 'overlap', 'LL1', 'LL2', 
-        'BTF', 'LLATTF', 'AFT', 'SP', 'RA', 
+        'BTF', 'LLATTF', 'AFT', 'SP', 'SH', 'RA', 
         'is_driver_side', 'OT',
     ]
     

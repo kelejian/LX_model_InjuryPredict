@@ -449,9 +449,9 @@ class InjuryPredictModel(nn.Module):
         
         #########################################
         # MLP 编码器，处理连续特征和离散特征的嵌入
-        # 连续特征: 10个 (impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, RA)
+        # 连续特征: 11个 (impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, SH, RA)
         # 离散特征: 维度由 DiscreteFeatureEmbedding.output_dim 提供 (4 + 8 = 12)
-        num_continuous_features = 10
+        num_continuous_features = 11 # 20260123 增加了 座椅高度 特征
         mlp_encoder_input_dim = num_continuous_features + self.discrete_embedding.output_dim
         # 3. MLP 编码器定义
         self.mlp_encoder = BaseMLP(
@@ -513,7 +513,7 @@ class InjuryPredictModel(nn.Module):
         """
         参数:
             x_acc (torch.Tensor): 碰撞波形数据，形状为 (B, 2, 150)。
-            x_att_continuous (torch.Tensor): 连续特征，形状为 (B, 10)。
+            x_att_continuous (torch.Tensor): 连续特征，形状为 (B, 11)。
             x_att_discrete (torch.Tensor): 离散特征，形状为 (B, 2)。
 
         返回:
