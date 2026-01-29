@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-test_all_data.py (v2)
-
 加载一个已训练好的模型（教师或学生），在【完整】的数据集上运行预测，
 并将预测结果、真实标签、误差、数据集划分（train/valid/test）、
-以及原始的18个标量工况特征合并到一个CSV文件中，保存到该模型的 run 目录下。
+以及原始的13个标量工况特征合并到一个CSV文件中，保存到该模型的 run 目录下。
 
 同时，在命令行打印各子集上的核心性能指标（MAE 和 Accuracy）。
 """
@@ -31,13 +29,13 @@ set_random_seed()
 # --- 1. 配置区：请在此处设置您的路径 ---
 
 # 1.1) 要评估的模型所在的运行目录
-RUN_DIR = "./runs/InjuryPredictModel_10261509"  # 示例: "./runs/InjuryPredictModel_XXXXXXXX" 或 "./runs/StudentModel_XXXXXX"
+RUN_DIR = "./runs/InjuryPredictModel_01281059"  # 示例: "./runs/InjuryPredictModel_XXXXXXXX" 或 "./runs/StudentModel_XXXXXX"
 
 # 1.2) 要加载的模型权重文件名
-WEIGHT_FILE = "final_model.pth"
+WEIGHT_FILE = "best_val_loss.pth"
 
-# 1.3) 包含原始18个标量特征的 distribution 文件路径
-DISTRIBUTION_FILE = r"E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0121.csv" 
+# 1.3) 包含原始13个标量特征的 distribution 文件路径
+DISTRIBUTION_FILE = r"E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0123.csv" 
 
 # 1.4) 存放 .pt 数据集的目录
 DATA_DIR = "./data"
@@ -59,6 +57,7 @@ def load_original_features(dist_file_path):
     # 连续特征 (0-10): impact_velocity, impact_angle, overlap, LL1, LL2, BTF, LLATTF, AFT, SP, SH, RA
     # 离散特征 (11-12): is_driver_side, OT
     feature_columns = [
+        'case_id',
         'impact_velocity', 'impact_angle', 'overlap', 'LL1', 'LL2', 
         'BTF', 'LLATTF', 'AFT', 'SP', 'SH', 'RA', 
         'is_driver_side', 'OT',
@@ -99,7 +98,6 @@ def load_model_and_data(run_dir, weight_file, data_dir=DATA_DIR):
     
     # 获取底层的、包含所有样本的 CrashDataset 实例
     full_dataset = train_subset.dataset
-    num_classes_of_discrete = full_dataset.num_classes_of_discrete
     all_case_ids = full_dataset.case_ids # 获取所有 case_id 的顺序
     
     print(f"成功加载完整数据集，共 {len(full_dataset)} 个样本。")
@@ -187,7 +185,7 @@ def create_results_dataframe(dataset, predictions_np, original_features_df, case
     
     # 3. 计算预测的AIS等级 (确保返回整数类型)
     results_df['AIS_head_pred'] = AIS_cal_head(results_df['HIC_pred']).astype(int)
-    results_df['AIS_chest_pred'] = AIS_cal_chest(results_df['Dmax_pred'], original_features_df['OT']).astype(int)
+    results_df['AIS_chest_pred'] = AIS_cal_chest(results_df['Dmax_pred'], dataset.OT_raw).astype(int)
     results_df['AIS_neck_pred'] = AIS_cal_neck(results_df['Nij_pred']).astype(int)
     
     # 4. 计算预测的 MAIS 等级 (确保整数)
@@ -225,10 +223,9 @@ def create_results_dataframe(dataset, predictions_np, original_features_df, case
     
     ordered_columns = [
         'case_id',
-        'OT',
-        'dataset_type', # 新
+        'dataset_type',
         'all_AIS_correct',
-        # MAIS (新)
+        # MAIS
         'MAIS_true_raw', 'MAIS_pred', 'MAIS_diff',
         # 头部
         'HIC_true', 'HIC_pred', 
@@ -323,7 +320,7 @@ def print_metrics_summary(df):
 
 if __name__ == "__main__":
     
-    # 1. 加载原始18个标量特征
+    # 1. 加载原始13个标量特征
     original_features_df = load_original_features(DISTRIBUTION_FILE)
     
     # 2. 加载模型、完整数据集和 case_id 映射
@@ -347,5 +344,5 @@ if __name__ == "__main__":
     print(f"总计处理 {len(final_results_df)} 条数据。")
     print("="*60)
     
-    # 6. (新) 打印性能摘要
+    # 6. 打印性能摘要
     print_metrics_summary(final_results_df)

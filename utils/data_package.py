@@ -109,6 +109,8 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
             waveforms_np = np.stack([ax_sampled, ay_sampled]).squeeze() # 形状 (2, 150), 通道维度在前，分别是 x, y，对应索引 0, 1
 
             # --- 4. 提取匹配的参数 ---          
+            # 输入的特征顺序必须严格按照此处 params_np 数组构建时的顺序
+            # 打包后的 .npz 文件中，params 数组仅存储了纯数值矩阵（Numpy Array），不包含任何特征列名信息。因此推理时必须人工确保构建的输入数组顺序与打包代码中的逻辑完全一致。
             params_np = np.array([
                 # --- 连续特征 (Continuous): 共 11 个---
                 params_row['impact_velocity'], # 碰撞速度 kph
@@ -162,7 +164,7 @@ def package_input_data(pulse_dir, params_path, case_id_list, output_path):
 if __name__ == '__main__':
     pulse_dir = r'G:\VCS_acc_data\acc_data_before1111_6134'
     params_path = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\仿真数据库相关\distribution\distribution_0123.csv'
-    output_dir = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\LX-model-InjuryPredict\data'
+    output_dir = r'E:\WPS Office\1628575652\WPS企业云盘\清华大学\我的企业文档\课题组相关\理想项目\LX_model_injurypredict\data'
     # 读取distribution文件
     if params_path.endswith('.npz'):
         distribution_npz = np.load(params_path, allow_pickle=True)
