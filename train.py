@@ -153,6 +153,7 @@ if __name__ == "__main__":
     Learning_rate = training_params['Learning_rate']
     Learning_rate_min = training_params['Learning_rate_min']
     weight_decay = training_params['weight_decay']
+    early_stop_start_epochs = training_params['early_stop_start_epochs']
     Patience = training_params['Patience']
     
     # 2. 损失函数相关
@@ -244,6 +245,7 @@ if __name__ == "__main__":
             "training": {
                 "Epochs": Epochs, "Batch_size": Batch_size, "Learning_rate": Learning_rate,
                 "Learning_rate_min": Learning_rate_min, "weight_decay": weight_decay,
+                "early_stop_start_epochs": early_stop_start_epochs,
                 "Patience": Patience,
             },
             "loss": {
@@ -428,7 +430,7 @@ if __name__ == "__main__":
                 print(f"Best model saved with val {format_str.format(current_value)} at epoch {epoch+1}")
 
         # 早停逻辑
-        if epoch > Epochs * 0.4 and len(val_loss_history) >= Patience:
+        if epoch > early_stop_start_epochs and len(val_loss_history) >= Patience:
             # 检查最佳指标是否在最近 Patience 个 epoch 之外
             epochs_since_best_loss = epoch + 1 - best_loss_epoch
             epochs_since_best_mais = epoch + 1 - best_MAIS_accu_epoch
